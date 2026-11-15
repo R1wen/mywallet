@@ -29,7 +29,7 @@ Next 16 diffère de la mémoire d'entraînement. Lire `node_modules/next/dist/do
 pnpm dev                 # serveur de dev (http://localhost:3000)
 pnpm typecheck           # next typegen + tsc
 pnpm lint | pnpm format:check
-pnpm test                # tests unitaires (rapides)
+pnpm test [chemin]       # tests unitaires (rapides) — ne pas utiliser `pnpm exec vitest` (plante avec Vitest 5 + projects)
 pnpm test:coverage       # seuil 80 % sur src/lib/domain
 pnpm test:int            # intégration, nécessite Postgres (docker compose up -d db)
 pnpm e2e                 # Playwright

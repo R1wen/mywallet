@@ -21,7 +21,8 @@ if (!tsc.ok) {
   process.exit(2);
 }
 
-const tests = pnpm(["exec", "vitest", "run", "--project", "unit", "src/lib/domain"], {
+// Via le script `test` : `pnpm exec vitest` plante (« reading 'config' ») avec Vitest 5 + projects.
+const tests = pnpm(["test", "src/lib/domain"], {
   timeoutMs: 180_000,
 });
 if (!tests.ok) {
