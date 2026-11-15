@@ -11,7 +11,7 @@ services:
       TZ: Europe/Paris
     ports:
       # 5433 côté hôte : évite le conflit avec un PostgreSQL déjà installé sur la machine.
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -39,7 +39,7 @@ services:
     image: ollama/ollama:0.12.6
     profiles: ["ollama"]
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama-data:/root/.ollama
 

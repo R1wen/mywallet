@@ -1,26 +1,47 @@
 import { z } from "zod";
 
-const serverSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET doit faire au moins 32 caractères"),
-  BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-});
+const serverSchema = z
+  .object({
+    DATABASE_URL: z.string().url(),
+    BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET doit faire au moins 32 caractères"),
+    BETTER_AUTH_URL: z.string().url().optional(),
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+  })
+  .superRefine((env, ctx) => {
+    // En production Vercel, l'URL publique doit être fournie explicitement et en HTTPS :
+    // elle sert d'origine de confiance (CSRF) et de base des cookies.
+    if (env.VERCEL_ENV === "production" && !env.BETTER_AUTH_URL?.startsWith("https://")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["BETTER_AUTH_URL"],
+        message: "obligatoire et en https:// en production",
+      });
+    }
+  })
+  .transform((env) => ({
+    ...env,
+    BETTER_AUTH_URL: env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  }));
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
-let cached: ServerEnv | undefined;
-
-/** Validated server environment. Throws a readable error listing missing variables. */
-export function serverEnv(): ServerEnv {
-  if (cached) return cached;
-  const parsed = serverSchema.safeParse(process.env);
+/** Valide un environnement donné (exporté pour les tests). */
+export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
+  const parsed = serverSchema.safeParse(source);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`);
     throw new Error(
       `Variables d'environnement invalides :\n${issues.join("\n")}\nVoir .env.example.`,
     );
   }
-  cached = parsed.data;
+  return parsed.data;
+}
+
+let cached: ServerEnv | undefined;
+
+/** Environnement serveur validé (mis en cache). Erreur lisible listant les variables fautives. */
+export function serverEnv(): ServerEnv {
+  cached ??= parseServerEnv(process.env);
   return cached;
 }

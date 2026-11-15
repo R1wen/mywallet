@@ -18,7 +18,14 @@ permissions:
 jobs:
   image:
     name: Docker image (GHCR)
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Frontière de confiance : uniquement un push sur main de CE dépôt (jamais une PR, jamais un fork,
+    # même si sa branche s'appelle "main"), ou un lancement manuel depuis main.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -58,18 +65,20 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+    # Secrets passés étape par étape (jamais au niveau du job : `pnpm install` ne les voit pas).
     steps:
       - name: Check deployment secrets
         id: guard
+        env:
+          HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
+          HAS_VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID != '' }}
+          HAS_VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID != '' }}
+          HAS_PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL != '' }}
         run: |
           missing=""
-          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID DATABASE_URL; do
-            [ -z "${!v}" ] && missing="$missing $v"
+          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_DATABASE_URL; do
+            flag="HAS_$v"
+            [ "${!flag}" != "true" ] && missing="$missing $v"
           done
           if [ -n "$missing" ]; then
             echo "::warning::Déploiement ignoré : secrets manquants :$missing (voir docs/DEPLOY.md)."
@@ -93,14 +102,20 @@ jobs:
       - name: Apply database migrations (Neon)
         if: steps.guard.outputs.ready == 'true'
         # Migrations additives uniquement (expand/contract) : l'ancienne version reste compatible.
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: pnpm db:migrate
       - name: Build and deploy with Vercel CLI
         id: deploy
         if: steps.guard.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          pnpm dlx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
-          pnpm dlx vercel@latest build --prod --token="$VERCEL_TOKEN"
-          url=$(pnpm dlx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          pnpm dlx vercel@65.16.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          pnpm dlx vercel@65.16.0 build --prod --token="$VERCEL_TOKEN"
+          url=$(pnpm dlx vercel@65.16.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Health check
         if: steps.guard.outputs.ready == 'true'
