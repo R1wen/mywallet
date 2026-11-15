@@ -16,6 +16,7 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { isAvailable, NAV_ITEMS } from "./nav";
+import { useSignOut } from "./sign-out";
 
 type PaletteContext = { open: () => void };
 const Ctx = createContext<PaletteContext | null>(null);
@@ -35,6 +36,7 @@ const itemClass = cn(
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
   const router = useRouter();
+  const signOut = useSignOut();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -91,7 +93,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                   <Command.Item
                     className={itemClass}
                     value="se déconnecter"
-                    onSelect={() => run(() => router.push("/deconnexion"))}
+                    onSelect={() => run(() => void signOut())}
                   >
                     <LogOut className="size-4" aria-hidden />
                     Se déconnecter
