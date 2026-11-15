@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
+  devIndicators: false,
   turbopack: {
     rules: {
       "*.css": {
