@@ -65,3 +65,37 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 
 - Décision : hooks écrits en `.mjs` (portables Windows/CI) : garde `.env*` et `rm -r`, format+lint après édition, typecheck + tests domaine en fin de tour si du TypeScript a changé, état de la ROADMAP au démarrage.
 - Conséquences : Claude ne peut pas créer `.env.local` ; l'utilisateur le copie depuis `.env.example`.
+
+## ADR-013 — Énumérations en `text` + CHECK
+
+- Décision : statuts et types stockés en `text` avec contrainte CHECK (pas de `pgEnum`), listes partagées en TypeScript.
+- Conséquences : ajouter une valeur = une migration qui remplace la contrainte, sans `ALTER TYPE`.
+
+## ADR-014 — Clés étrangères composites optionnelles en NO ACTION
+
+- Contexte : Drizzle ne sait pas exprimer `ON DELETE SET NULL (col)` ; un `SET NULL` simple annulerait aussi `user_id`.
+- Décision : NO ACTION. La couche domaine détache ou réaffecte les lignes avant de supprimer une catégorie, un marchand, une règle ou une transaction liée. La suppression d'un utilisateur cascade toujours (contrôle en fin d'instruction).
+
+## ADR-015 — Marchands par utilisateur
+
+- Décision : table `merchants` par utilisateur (alias, domaine, logo, catégorie par défaut), alimentée depuis un catalogue d'enseignes françaises (seed, puis à l'inscription au Sprint 1).
+
+## ADR-016 — Créances : `claims` + `claim_payments`
+
+- Décision : une créance par part et par personne ; chaque remboursement reçu crée une transaction `reimbursement` (> 0, sur n'importe quel compte) et une ligne `claim_payments`. La clé étrangère `(user_id, transaction_id, transaction_kind='reimbursement')` garantit qu'un paiement ne pointe que vers un remboursement. Supprimer la transaction de remboursement supprime le paiement (cascade) ; une créance ou une dépense ayant des paiements ne peut pas être supprimée.
+- Règles applicatives (Sprint 4, `src/lib/domain`) : somme des paiements ≤ montant dû, statut `reimbursed` seulement si soldée, devise identique, retour à `pending` après annulation d'un paiement.
+- Ma dépense réelle = |dépense| − Σ parts (en attente ou remboursées : montant ; offertes : seulement la part déjà payée ; annulées : 0).
+
+## ADR-017 — Convention de signe
+
+- Décision : `transactions.amount_cents` signé (négatif = sortie, positif = entrée). CHECK : dépense < 0, revenu et remboursement > 0, virement ≠ 0. Les lignes de ticket stockent des montants positifs (remises négatives).
+- Point ouvert : le remboursement d'un achat par un marchand (avoir) devra être modélisé au Sprint 1 (nouveau type ou assouplissement du CHECK).
+
+## ADR-018 — PostgreSQL local sur le port 5433
+
+- Contexte : un PostgreSQL natif Windows occupe déjà 5432 sur le poste de développement.
+- Décision : le conteneur `db` est publié sur 5433 côté hôte. La CI garde 5432 (service isolé).
+
+## ADR-019 — `jobs.user_id` facultatif
+
+- Décision : nullable pour permettre des tâches système ; cascade depuis `user` quand renseigné.

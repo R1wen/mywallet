@@ -1,9 +1,15 @@
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+const serverOnlyStub = fileURLToPath(new URL("./tests/stubs/server-only.ts", import.meta.url));
+
 export default defineConfig({
   plugins: [react()],
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    tsconfigPaths: true,
+    alias: { "server-only": serverOnlyStub },
+  },
   test: {
     coverage: {
       provider: "v8",
@@ -27,6 +33,7 @@ export default defineConfig({
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
           environment: "node",
+          globalSetup: ["./tests/integration/global-setup.ts"],
           setupFiles: ["./tests/integration/setup.ts"],
           fileParallelism: false,
           testTimeout: 30_000,
