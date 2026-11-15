@@ -44,7 +44,10 @@ test.describe("authentification", () => {
     await page.getByLabel("E-mail").fill("inconnu@mywallet.test");
     await page.getByLabel("Mot de passe").fill("mauvais-mot-de-passe");
     await page.getByRole("button", { name: "Se connecter" }).click();
-    await expect(page.getByRole("alert")).toHaveText("E-mail ou mot de passe incorrect.");
+    // Next ajoute aussi un annonceur de route avec role="alert" : on cible le message.
+    await expect(
+      page.getByRole("alert").filter({ hasText: "E-mail ou mot de passe incorrect." }),
+    ).toBeVisible();
   });
 
   test("valide les champs côté client", async ({ page }) => {
