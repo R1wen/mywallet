@@ -1,0 +1,124 @@
+"use client";
+
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { isActive, isAvailable, NAV_ITEMS } from "./nav";
+
+const STORAGE_KEY = "mw.sidebar.collapsed";
+
+export function Sidebar({ footer }: { footer?: ReactNode }) {
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lecture d'une préférence locale après hydratation
+      setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      /* stockage indisponible : on garde la barre ouverte */
+    }
+  }, []);
+
+  function toggle() {
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, c ? "0" : "1");
+      } catch {
+        /* ignore */
+      }
+      return !c;
+    });
+  }
+
+  return (
+    <aside
+      data-collapsed={collapsed}
+      className={cn(
+        "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-bg md:flex",
+        "w-60 transition-[width] duration-[var(--duration-slow)] ease-out data-[collapsed=true]:w-14",
+      )}
+    >
+      <div className="flex h-14 items-center justify-between gap-2 border-b border-border px-3">
+        <Link
+          href="/"
+          className={cn(
+            "flex items-center gap-2 rounded-sm px-1 text-base font-semibold",
+            collapsed && "sr-only",
+          )}
+        >
+          <span
+            aria-hidden
+            className="flex size-5 items-center justify-center rounded-[4px] bg-accent"
+          >
+            <span className="h-2 w-2.5 rounded-[1px] border-[1.5px] border-bg" />
+          </span>
+          myWallet
+        </Link>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? "Déplier la barre latérale" : "Replier la barre latérale"}
+          aria-expanded={!collapsed}
+          className="flex size-8 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-text"
+        >
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+        </button>
+      </div>
+
+      <nav aria-label="Navigation principale" className="flex-1 overflow-y-auto p-2">
+        <ul className="flex flex-col gap-0.5">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item.href);
+            const available = isAvailable(item);
+            const content = (
+              <>
+                <item.icon className="size-4" aria-hidden />
+                <span className={cn("truncate", collapsed && "sr-only")}>{item.label}</span>
+                {!available && !collapsed && (
+                  <span className="ml-auto text-xs text-subtle">S{item.sprint}</span>
+                )}
+              </>
+            );
+            const base = cn(
+              "flex h-8 items-center gap-2.5 rounded-sm px-2 text-base",
+              collapsed && "justify-center px-0",
+            );
+            return (
+              <li key={item.href}>
+                {available ? (
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      base,
+                      "text-muted transition-colors duration-[var(--duration-fast)] hover:bg-surface-2 hover:text-text",
+                      active && "bg-surface-2 text-text",
+                    )}
+                  >
+                    {content}
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    title={`Disponible au sprint ${item.sprint}`}
+                    className={cn(base, "cursor-not-allowed text-subtle")}
+                  >
+                    {content}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {footer && (
+        <div className={cn("border-t border-border p-2", collapsed && "hidden")}>{footer}</div>
+      )}
+    </aside>
+  );
+}
