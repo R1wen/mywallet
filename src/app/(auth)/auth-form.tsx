@@ -129,7 +129,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         {isSignUp ? "Déjà un compte ? " : "Pas encore de compte ? "}
         <Link
           href={isSignUp ? "/connexion" : "/inscription"}
-          className="text-text underline-offset-4 hover:underline"
+          className="inline-flex items-center text-text underline-offset-4 hover:underline pointer-coarse:min-h-11 pointer-coarse:px-1"
         >
           {isSignUp ? "Se connecter" : "Créer un compte"}
         </Link>

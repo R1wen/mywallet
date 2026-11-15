@@ -57,7 +57,7 @@ const TOKENS = [
 ] as const;
 
 const TYPE_SCALE = [
-  [40, "text-2xl", "Solde 12 480,00 €"],
+  [40, "text-2xl", "Vue du mois"],
   [28, "text-xl", "Titre de page"],
   [20, "text-lg", "Titre de section"],
   [16, "text-md", "Texte d'accent"],
@@ -130,7 +130,7 @@ export function DesignShowcase() {
           {TYPE_SCALE.map(([px, cls, sample]) => (
             <div key={px} className="flex items-baseline gap-6 px-4 py-3">
               <span className="num w-10 shrink-0 text-xs text-subtle">{px}</span>
-              <span className={`${cls} truncate font-medium`}>{sample}</span>
+              <span className={`${cls} min-w-0 font-medium`}>{sample}</span>
             </div>
           ))}
           <div className="flex items-baseline gap-6 px-4 py-3">
@@ -241,9 +241,9 @@ export function DesignShowcase() {
             <TableHeader>
               <TableRow className="h-9 hover:bg-transparent">
                 <TableHead>Magasin</TableHead>
-                <TableHead>Catégorie</TableHead>
+                <TableHead className="max-sm:hidden">Catégorie</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Partage</TableHead>
+                <TableHead className="max-sm:hidden">Partage</TableHead>
                 <TableHead data-align="right">Montant</TableHead>
               </TableRow>
             </TableHeader>
@@ -256,9 +256,11 @@ export function DesignShowcase() {
                       <span className="font-medium">{r.merchant}</span>
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted">{r.category}</TableCell>
+                  <TableCell className="text-muted max-sm:hidden">{r.category}</TableCell>
                   <TableCell className="text-muted">{formatDateFr(r.date)}</TableCell>
-                  <TableCell>{r.claim ? <ClaimBadge status={r.claim} /> : null}</TableCell>
+                  <TableCell className="max-sm:hidden">
+                    {r.claim ? <ClaimBadge status={r.claim} /> : null}
+                  </TableCell>
                   <TableCell data-align="right">
                     <Amount cents={r.cents} variant="flow" />
                   </TableCell>

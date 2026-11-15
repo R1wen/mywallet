@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/shell/app-shell";
+import { MobileUserMenu } from "@/components/shell/mobile-user-menu";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/session";
@@ -14,6 +15,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       userMenu={
         <Suspense fallback={<Skeleton className="h-9 w-full" />}>
           <CurrentUserMenu />
+        </Suspense>
+      }
+      topbarActions={
+        <Suspense fallback={<Skeleton className="size-8 md:hidden" />}>
+          <CurrentMobileUserMenu />
         </Suspense>
       }
     >
@@ -32,6 +38,11 @@ async function AuthGate({ children }: { children: ReactNode }) {
 async function CurrentUserMenu() {
   const user = await requireUser();
   return <UserMenu name={user.name} email={user.email} />;
+}
+
+async function CurrentMobileUserMenu() {
+  const user = await requireUser();
+  return <MobileUserMenu name={user.name} email={user.email} />;
 }
 
 function ContentSkeleton() {

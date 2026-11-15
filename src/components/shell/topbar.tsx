@@ -1,15 +1,21 @@
 "use client";
 
 import { Search } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
+import { LogoMark } from "@/components/ui/logo";
 import { useCommandPalette } from "./command-palette";
 
 export function Topbar({ title, actions }: { title?: string; actions?: ReactNode }) {
   const palette = useCommandPalette();
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg px-4 md:px-6">
-      {title && <h1 className="truncate text-md font-semibold md:hidden">{title}</h1>}
+      {/* Mobile : la barre latérale est masquée, la marque passe dans la barre supérieure. */}
+      <Link href="/" className="flex items-center gap-2 text-base font-semibold md:hidden">
+        <LogoMark />
+        {title ?? "myWallet"}
+      </Link>
       <button
         type="button"
         onClick={palette.open}

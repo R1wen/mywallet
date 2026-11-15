@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 export const inputClass = cn(
   "h-8 w-full min-w-0 rounded-sm border border-border-strong bg-surface px-2.5 text-base text-text",
   "transition-colors duration-[var(--duration-fast)] outline-none",
-  "hover:border-muted/40 focus-visible:border-accent focus-visible:outline-none",
+  // Anneau de focus accent (charte) : bordure + contour de 1 px, sans halo.
+  "hover:border-muted/40 focus-visible:border-accent focus-visible:outline-1 focus-visible:outline-offset-0 focus-visible:outline-accent focus-visible:outline-solid",
   "disabled:cursor-not-allowed disabled:opacity-50",
   "aria-invalid:border-danger",
   "pointer-coarse:h-11 pointer-coarse:text-md",

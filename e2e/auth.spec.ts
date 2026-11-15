@@ -21,7 +21,8 @@ test.describe("authentification", () => {
     await page.getByLabel("Mot de passe").fill(password);
     await page.getByRole("button", { name: "Créer mon compte" }).click();
 
-    await expect(page).toHaveURL(/\/$/);
+    // Première navigation vers l'espace connecté : en dev, compilation à la demande (lente).
+    await expect(page).toHaveURL(/\/$/, { timeout: 60_000 });
     await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible();
 
     // Déconnexion via la palette de commandes (fonctionne sur desktop et mobile).

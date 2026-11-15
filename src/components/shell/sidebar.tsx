@@ -4,6 +4,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { LogoMark } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { isActive, isAvailable, NAV_ITEMS } from "./nav";
 
@@ -49,12 +50,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
             collapsed && "sr-only",
           )}
         >
-          <span
-            aria-hidden
-            className="flex size-5 items-center justify-center rounded-[4px] bg-accent"
-          >
-            <span className="h-2 w-2.5 rounded-[1px] border-[1.5px] border-bg" />
-          </span>
+          <LogoMark />
           myWallet
         </Link>
         <button
