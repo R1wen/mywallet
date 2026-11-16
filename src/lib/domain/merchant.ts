@@ -33,7 +33,15 @@ export function merchantInitials(name: string): string {
 }
 
 const BANK_PREFIXES = /^(cb|carte|prlv|prelevement|vir|virement|paiement)\s+/;
-const TRAILING_NOISE = /(\s+(\d[\d/.-]*|[a-z]?\d[\w]*))+$/;
+/** Store number, date or reference token: optional letter then a digit ("123", "f42", "0412"). */
+const NOISE_TOKEN = /^[a-z]?\d[a-z0-9]*$/;
+
+/** Drops trailing noise tokens, never the first word. Token-based: linear time, no backtracking. */
+function stripTrailingNoise(s: string): string {
+  const words = s.split(" ");
+  while (words.length > 1 && NOISE_TOKEN.test(words[words.length - 1]!)) words.pop();
+  return words.join(" ");
+}
 
 /**
  * Canonical lowercase key for matching raw labels (tickets, bank lines) to a merchant:
@@ -44,6 +52,5 @@ export function normalizeMerchantName(raw: string): string {
   s = s.replace(/\*.*$/, "");
   s = s.replace(/[^a-z0-9]+/g, " ").trim();
   s = s.replace(BANK_PREFIXES, "");
-  s = s.replace(TRAILING_NOISE, "");
-  return s.replace(/\s+/g, " ").trim();
+  return stripTrailingNoise(s);
 }

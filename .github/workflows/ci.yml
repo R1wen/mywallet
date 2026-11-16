@@ -138,10 +138,10 @@ jobs:
         with:
           fetch-depth: 0
       - uses: pnpm/action-setup@v6
+      # Pas de cache pnpm : l'audit lit le lockfile sans installer, le store n'existe pas.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-          cache: pnpm
       - name: Audit production dependencies (high and critical)
         run: pnpm audit --prod --audit-level high
       - name: Gitleaks secret scan
