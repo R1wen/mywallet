@@ -65,6 +65,14 @@ const monthFormatter = new Intl.DateTimeFormat("fr-FR", {
   year: "numeric",
 });
 
+/** True for a real calendar day "YYYY-MM-DD" (rejects 2026-02-30, unlike Date.parse). */
+export function isValidIsoDay(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(year, month);
+}
+
 export type MonthKey = { year: number; month: number };
 
 /** Parses "YYYY-MM" (URL parameter `mois`); anything else is null. */

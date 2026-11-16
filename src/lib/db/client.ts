@@ -18,3 +18,5 @@ if (process.env.NODE_ENV !== "production") globalForDb.__mwPool = pool;
 
 export const db = drizzle(pool, { schema, casing: "snake_case" });
 export type Db = typeof db;
+/** The pool or an open transaction: repository helpers accept either. */
+export type Conn = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];

@@ -4,6 +4,7 @@ import {
   formatDateFr,
   formatMonthFr,
   isLeapYear,
+  isValidIsoDay,
   monthBounds,
   parseMonthKey,
   shiftMonth,
@@ -97,5 +98,20 @@ describe("month keys", () => {
     [2026, 3, -14, { year: 2025, month: 1 }],
   ])("shiftMonth(%d, %d, %d)", (y, m, delta, expected) => {
     expect(shiftMonth(y, m, delta)).toEqual(expected);
+  });
+});
+
+describe("isValidIsoDay", () => {
+  it.each([
+    ["2026-11-16", true],
+    ["2024-02-29", true],
+    ["2026-02-29", false],
+    ["2026-02-30", false],
+    ["2026-13-01", false],
+    ["2026-00-10", false],
+    ["2026-1-01", false],
+    ["", false],
+  ])("%j -> %s", (input, expected) => {
+    expect(isValidIsoDay(input)).toBe(expected);
   });
 });
