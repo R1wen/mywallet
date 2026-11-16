@@ -63,7 +63,7 @@ async function Recurring({ searchParams }: Pick<PageProps<"/recurrent">, "search
   const [rav, occurrences, rules, accounts] = await Promise.all([
     getResteAVivre(user.id, today),
     listOccurrences(user.id, bounds),
-    listRules(user.id),
+    listRules(user.id, today),
     listAccounts(user.id),
   ]);
 
@@ -129,7 +129,7 @@ async function Recurring({ searchParams }: Pick<PageProps<"/recurrent">, "search
                   href="/recurrent"
                   className="ml-2 text-sm text-muted underline-offset-4 hover:text-text hover:underline"
                 >
-                  Revenir au mois en cours
+                  Mois en cours
                 </Link>
               )}
             </nav>

@@ -117,10 +117,20 @@ export type RecurringRuleRow = {
   nextDueOn: string | null;
 };
 
-export async function listRules(userId: string, db: Db = defaultDb): Promise<RecurringRuleRow[]> {
+/** Rules with their next due date: first planned occurrence from `today`, else the cursor. */
+export async function listRules(
+  userId: string,
+  today: string,
+  db: Db = defaultDb,
+): Promise<RecurringRuleRow[]> {
   const rows = await db
     .select({
       rule: recurringRules,
+      nextPlanned: sql<string | null>`(
+        select min(o.due_on)::text from ${recurringOccurrences} o
+        where o.user_id = ${recurringRules.userId} and o.rule_id = ${recurringRules.id}
+          and o.status = 'planned' and o.due_on >= ${today}
+      )`,
       accountName: accounts.name,
       toAccountName: toAccounts.name,
       categoryName: categories.name,
@@ -152,7 +162,7 @@ export async function listRules(userId: string, db: Db = defaultDb): Promise<Rec
     .where(eq(recurringRules.userId, userId))
     .orderBy(asc(recurringRules.kind), asc(sql`lower(${recurringRules.label})`));
 
-  return rows.map(({ rule, ...r }) => {
+  return rows.map(({ rule, nextPlanned, ...r }) => {
     const ended = rule.endOn !== null && rule.nextRunOn > rule.endOn;
     return {
       id: rule.id,
@@ -170,7 +180,7 @@ export async function listRules(userId: string, db: Db = defaultDb): Promise<Rec
       schedule: describeRecurrence(specOf(rule)),
       startOn: rule.startOn,
       endOn: rule.endOn,
-      nextDueOn: ended || !rule.active ? null : rule.nextRunOn,
+      nextDueOn: !rule.active ? null : (nextPlanned ?? (ended ? null : rule.nextRunOn)),
     };
   });
 }

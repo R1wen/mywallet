@@ -52,7 +52,7 @@ export function RuleList({ rules }: { rules: RecurringRuleRow[] }) {
                         </span>
                       </span>
                     </span>
-                    <span className="w-32 shrink-0 text-right text-sm text-muted max-md:hidden">
+                    <span className="w-40 shrink-0 text-right text-sm whitespace-nowrap text-muted max-md:hidden">
                       {r.nextDueOn ? `Prochaine : ${formatDateFr(r.nextDueOn)}` : "Terminée"}
                     </span>
                     <Amount

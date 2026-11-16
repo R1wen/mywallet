@@ -108,7 +108,7 @@ afterAll(() => deleteUsers([A, B]));
 
 describe("rules", () => {
   it("starts from today: past dates of the month are not generated", async () => {
-    const rows = await listRules(A);
+    const rows = await listRules(A, TODAY);
     const byLabel = new Map(rows.map((r) => [r.label, r]));
     expect(byLabel.get("Loyer")).toMatchObject({
       nextDueOn: "2026-12-05",
@@ -155,6 +155,9 @@ describe("generation", () => {
       .where(eq(recurringOccurrences.userId, A));
     expect(all).toHaveLength(5);
     expect(new Set(all.map((o) => `${o.ruleId}:${o.dueOn}`)).size).toBe(5);
+    // La prochaine échéance affichée est la première encore prévue, pas le curseur (janvier).
+    const loyer = (await listRules(A, TODAY)).find((r) => r.id === rent);
+    expect(loyer?.nextDueOn).toBe("2026-12-05");
   });
 
   it("caps the generation window twelve months ahead", () => {
@@ -348,7 +351,7 @@ describe("rule changes", () => {
 
 describe("isolation", () => {
   it("user B sees nothing of user A", async () => {
-    expect(await listRules(B)).toEqual([]);
+    expect(await listRules(B, TODAY)).toEqual([]);
     expect(await getRule(B, rent)).toBeNull();
     expect(await listOccurrences(B, { from: "2026-01-01", to: "2027-12-31" })).toEqual([]);
     expect(await generateOccurrences(B, "2027-12-31")).toBe(0);

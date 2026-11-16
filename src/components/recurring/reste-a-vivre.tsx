@@ -19,7 +19,7 @@ export function ResteAVivreStrip({ rav }: { rav: ResteAVivreSummary }) {
       <Figure label="Charges à venir" hint="Prélèvements et épargne prévus">
         <Amount cents={rav.plannedChargesCents} />
       </Figure>
-      <Figure label="Revenus attendus" hint="Encore à recevoir ce mois-ci">
+      <Figure label="Revenus attendus" hint="À recevoir ce mois">
         <Amount
           cents={rav.plannedIncomeCents}
           variant={rav.plannedIncomeCents ? "flow" : "plain"}

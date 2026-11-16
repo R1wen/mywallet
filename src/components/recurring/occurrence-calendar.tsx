@@ -91,8 +91,8 @@ export function OccurrenceCalendar({
                     </span>
                     <Amount
                       cents={displayed(o)}
-                      variant={o.kind === "transfer" || o.status !== "planned" ? "plain" : "flow"}
-                      className="text-xs"
+                      variant={o.kind === "transfer" ? "plain" : "flow"}
+                      className={cn("text-xs", o.status !== "planned" && "text-muted")}
                     />
                   </OccurrenceButton>
                 ))}
@@ -134,7 +134,8 @@ export function OccurrenceCalendar({
                           <span
                             className={cn(
                               "truncate text-base",
-                              o.status === "skipped" && "text-muted line-through",
+                              o.status !== "planned" && "text-muted",
+                              o.status === "skipped" && "line-through",
                             )}
                           >
                             {o.label}
@@ -147,6 +148,7 @@ export function OccurrenceCalendar({
                         <Amount
                           cents={displayed(o)}
                           variant={o.kind === "transfer" ? "plain" : "flow"}
+                          className={cn(o.status !== "planned" && "text-muted")}
                         />
                       </OccurrenceButton>
                     </li>

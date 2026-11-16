@@ -315,23 +315,25 @@ export function RuleForm({
 
         <fieldset className="flex flex-col gap-3 rounded-sm border border-border p-3">
           <legend className="px-1 text-sm text-muted">Échéances</legend>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Fréquence" error={errors.frequency?.message}>
-              {({ id, describedBy, invalid }) => (
-                <NativeSelect
-                  id={id}
-                  aria-invalid={invalid}
-                  aria-describedby={describedBy}
-                  {...form.register("frequency")}
-                >
-                  {RECURRENCE_FREQUENCIES.map((f) => (
-                    <option key={f} value={f}>
-                      {FREQUENCY_LABELS[f]}
-                    </option>
-                  ))}
-                </NativeSelect>
-              )}
-            </Field>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="col-span-2 sm:col-span-1">
+              <Field label="Fréquence" error={errors.frequency?.message}>
+                {({ id, describedBy, invalid }) => (
+                  <NativeSelect
+                    id={id}
+                    aria-invalid={invalid}
+                    aria-describedby={describedBy}
+                    {...form.register("frequency")}
+                  >
+                    {RECURRENCE_FREQUENCIES.map((f) => (
+                      <option key={f} value={f}>
+                        {FREQUENCY_LABELS[f]}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                )}
+              </Field>
+            </div>
             <Field label="Tous les" error={errors.interval?.message}>
               {({ id, describedBy, invalid }) => (
                 <div className="relative">
@@ -351,7 +353,7 @@ export function RuleForm({
               )}
             </Field>
             {frequency === "weekly" ? (
-              <div aria-hidden />
+              <div aria-hidden className="max-sm:hidden" />
             ) : (
               <Field label="Le jour" error={errors.dayOfMonth?.message}>
                 {({ id, describedBy, invalid }) => (
@@ -401,6 +403,7 @@ export function RuleForm({
             {preview ?? "Complétez la fréquence et la date de début."}
             {preview && frequency === "yearly" ? " (mois de la date de début)" : ""}
             {preview && frequency === "weekly" ? " (jour de la date de début)" : ""}
+            {preview && !isEdit ? ". Première échéance à partir d'aujourd'hui." : ""}
           </p>
         </fieldset>
 
@@ -426,9 +429,7 @@ export function RuleForm({
             {confirmDelete ? "Confirmer la suppression" : "Supprimer"}
           </Button>
         ) : (
-          <span className="text-xs text-muted max-sm:hidden pointer-coarse:hidden">
-            Première échéance à partir d&apos;aujourd&apos;hui.
-          </span>
+          <span aria-hidden />
         )}
         <div className="flex gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onDone}>
