@@ -54,7 +54,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Tests : domaine, validation, composant formulaire de règle, 18 intégration, e2e (règle due aujourd'hui validée depuis le tableau de bord)
 - [x] Captures (`docs/screens/sprint-2/`), `ui-reviewer` (corrections : cibles tactiles 44 px des boutons, prochaine échéance réelle, signe des revenus validés, mise en page mobile)
 - [x] `/code-review` (10 corrections : jambe débitrice stable d'un virement, replanification sans doublon dans un mois validé, échéances en retard suivant le type de la règle, libellé d'épargne, requêtes en double)
-- [ ] PR, CI verte
+- [x] PR #4, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
