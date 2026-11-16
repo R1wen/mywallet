@@ -60,22 +60,25 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 ## Sprint 3 : Import intelligent
 
 - [x] Décisions validées : fichiers dans PostgreSQL, rapprochement sans doublon, structuration règles + Ollama + Gemini, fixtures synthétiques (ADR-027 à 030)
-- [ ] CSP avec nonce (reporté du Sprint 0)
-- [ ] Domaine (TDD) : signature des fichiers, parseur de tickets FR, validation déterministe et confiance, doublons, CSV bancaire, rapprochement
-- [ ] Fixtures : 15+ tickets synthétiques avec résultats attendus
-- [ ] Spike OCR (`ocr-benchmarker`) : PaddleOCR ONNX vs Tesseract, `docs/OCR-BENCHMARK.md` (vrais tickets dans `fixtures/receipts-private/`)
-- [ ] Schéma : fichiers, rapprochement, préréglages CSV (migration 0003)
-- [ ] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
-- [ ] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV
-- [ ] Structureurs Ollama et Gemini (désactivé par défaut)
-- [ ] Tests, captures, `ui-reviewer`, `security-reviewer`, `/code-review`
+- [x] CSP (ADR-031) : fixe, limitée à l'origine ; nonce écarté (incompatible avec Cache Components)
+- [x] Domaine (TDD) : signature des fichiers, parseur de tickets FR, validation déterministe et confiance, doublons, CSV bancaire, rapprochement
+- [x] Fixtures : 18 tickets synthétiques (16 images, 2 PDF) avec résultats attendus et sorties OCR
+- [x] Spike OCR (`ocr-benchmarker`) : tesseract.js par défaut, PaddleOCR non livré (ADR-008, `docs/OCR-BENCHMARK.md`) ; parseur 18/18 sur total et date
+- [ ] Benchmark sur les vrais tickets (`fixtures/receipts-private/`, à déposer par l'utilisateur)
+- [x] Schéma : fichiers, rapprochement, préréglages CSV, réglages d'import (migration 0003 additive)
+- [x] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
+- [x] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV, réglages
+- [x] Structureurs Ollama et Gemini (désactivés sans configuration, Gemini avec consentement)
+- [x] Tests : 509 unitaires, 83 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
+- [~] Captures, `ui-reviewer`, `security-reviewer`, `/code-review`
 - [ ] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
-- CSP avec nonce dans `proxy.ts` : avant le Sprint 3 (imports de fichiers, logos externes).
 - Docker derrière un proxy : configurer `advanced.ipAddress` de Better Auth (IP de confiance) avant tout auto-hébergement exposé.
-- Lien optionnel entre un avoir et l'achat d'origine (ADR-020) : à voir avec l'import de tickets (Sprint 3).
+- Lien optionnel entre un avoir et l'achat d'origine (ADR-020).
+- Repli OCR PaddleOCR (31 Mo de modèles à auto-héberger) : selon le benchmark sur les vrais tickets.
+- Catégorie au niveau de l'article et apprentissage des corrections (import, Sprint 3) : avec les budgets (Sprint 5).
 - Logo.dev (clé gratuite + attribution) comme source de logos supplémentaire (ADR-022).
 - Évals des skills projet (skill-creator) : à lancer quand les skills auront servi sur un sprint.
