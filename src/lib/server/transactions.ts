@@ -15,7 +15,13 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
-import { accounts, categories, merchants, transactions } from "@/lib/db/schema";
+import {
+  accounts,
+  categories,
+  merchants,
+  recurringOccurrences,
+  transactions,
+} from "@/lib/db/schema";
 import { normalizeMerchantName } from "@/lib/domain/merchant";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
@@ -40,7 +46,7 @@ import {
  * category or merchant even if a forged id reaches the database.
  */
 
-type Tx = Exclude<Conn, Db>;
+export type Tx = Exclude<Conn, Db>;
 
 export type TransactionListRow = {
   id: string;
@@ -258,7 +264,7 @@ const EXPECTED_CATEGORY_KIND = {
 } as const;
 
 /** Links the typed merchant name to an existing merchant (name or alias) or creates it. */
-async function resolveMerchant(userId: string, name: string, tx: Tx) {
+export async function resolveMerchant(userId: string, name: string, tx: Tx) {
   const normalizedName = normalizeMerchantName(name);
   if (!normalizedName) return null;
   const lookup = () =>
@@ -312,11 +318,16 @@ async function checkReferences(
   return null;
 }
 
-async function writeTransaction(
+/**
+ * Writes a transaction inside an open DB transaction. `recurringRuleId` links a movement
+ * created by validating a recurring occurrence (kept as is when the movement is edited).
+ */
+export async function writeTransaction(
   userId: string,
   input: TransactionInput,
   tx: Tx,
   existing?: { id: string; transferGroupId: string | null },
+  recurringRuleId: string | null = null,
 ): Promise<Result<{ id: string }>> {
   const refError = await checkReferences(userId, input, tx);
   if (refError) return fail(refError);
@@ -330,30 +341,44 @@ async function writeTransaction(
   };
 
   if (input.kind === "transfer") {
-    const groupId = existing?.transferGroupId ?? randomUUID();
-    if (existing) {
+    const out = {
+      ...common,
+      accountId: input.accountId,
+      amountCents: signedAmount("transfer", input.amountCents, "out"),
+      categoryId: input.categoryId,
+    };
+    const into = {
+      ...common,
+      accountId: input.toAccountId!,
+      amountCents: signedAmount("transfer", input.amountCents, "in"),
+      categoryId: input.categoryId,
+    };
+    if (existing?.transferGroupId) {
+      // Mise à jour en place des deux jambes : leurs ids restent stables (une échéance
+      // récurrente validée pointe sur la jambe débitrice).
+      const groupId = existing.transferGroupId;
+      const inGroup = and(
+        eq(transactions.userId, userId),
+        eq(transactions.transferGroupId, groupId),
+      );
+      const updated = await tx
+        .update(transactions)
+        .set(out)
+        .where(and(inGroup, eq(transactions.id, existing.id)))
+        .returning({ id: transactions.id });
+      if (!updated[0]) return fail(NOT_FOUND);
       await tx
-        .delete(transactions)
-        .where(and(eq(transactions.userId, userId), eq(transactions.transferGroupId, groupId)));
+        .update(transactions)
+        .set(into)
+        .where(and(inGroup, sql`${transactions.id} <> ${existing.id}`));
+      return ok(updated[0]);
     }
+    const groupId = randomUUID();
     const legs = await tx
       .insert(transactions)
       .values([
-        {
-          ...common,
-          ...(existing ? { id: existing.id } : {}),
-          accountId: input.accountId,
-          amountCents: signedAmount("transfer", input.amountCents, "out"),
-          categoryId: input.categoryId,
-          transferGroupId: groupId,
-        },
-        {
-          ...common,
-          accountId: input.toAccountId!,
-          amountCents: signedAmount("transfer", input.amountCents, "in"),
-          categoryId: input.categoryId,
-          transferGroupId: groupId,
-        },
+        { ...out, transferGroupId: groupId, recurringRuleId },
+        { ...into, transferGroupId: groupId, recurringRuleId },
       ])
       .returning({ id: transactions.id });
     return ok({ id: legs[0]!.id });
@@ -380,7 +405,10 @@ async function writeTransaction(
       .returning({ id: transactions.id });
     return rows[0] ? ok(rows[0]) : fail(NOT_FOUND);
   }
-  const [row] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
+  const [row] = await tx
+    .insert(transactions)
+    .values({ ...values, recurringRuleId })
+    .returning({ id: transactions.id });
   return ok(row!);
 }
 
@@ -446,16 +474,26 @@ export async function deleteTransaction(
       if (current.kind === "reimbursement") {
         return fail("Un remboursement s'annule depuis sa créance.");
       }
+      const scope = and(
+        eq(transactions.userId, userId),
+        current.transferGroupId
+          ? eq(transactions.transferGroupId, current.transferGroupId)
+          : eq(transactions.id, id),
+      );
+      // Une échéance récurrente validée par ce mouvement redevient « prévue » (ADR-024).
       await tx
-        .delete(transactions)
+        .update(recurringOccurrences)
+        .set({ status: "planned", transactionId: null })
         .where(
           and(
-            eq(transactions.userId, userId),
-            current.transferGroupId
-              ? eq(transactions.transferGroupId, current.transferGroupId)
-              : eq(transactions.id, id),
+            eq(recurringOccurrences.userId, userId),
+            inArray(
+              recurringOccurrences.transactionId,
+              tx.select({ id: transactions.id }).from(transactions).where(scope),
+            ),
           ),
         );
+      await tx.delete(transactions).where(scope);
       return ok(undefined);
     });
   } catch (e) {
