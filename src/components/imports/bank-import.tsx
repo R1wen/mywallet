@@ -159,7 +159,11 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
               aria-label="Fichier CSV du relevé"
               onChange={(e) => void onFile(e.target.files?.[0])}
             />
-            <Button variant="primary" disabled={busy} onClick={() => input.current?.click()}>
+            <Button
+              variant={file ? "outline" : "primary"}
+              disabled={busy}
+              onClick={() => input.current?.click()}
+            >
               <Upload /> {file ? "Changer de fichier" : "Choisir un fichier CSV"}
             </Button>
           </div>
@@ -182,7 +186,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
             <CardTitle className="truncate">{file.name}</CardTitle>
             {preview.fromPreset && <span className="text-xs text-muted">Colonnes mémorisées</span>}
           </CardHeader>
-          <div className="grid gap-3 px-4 pt-2 pb-4 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 px-4 pt-2 pb-4 sm:grid-cols-5">
             {(Object.keys(COLUMN_LABELS) as ColumnKey[]).map((key) => (
               <Field key={key} label={COLUMN_LABELS[key]}>
                 {({ id }) => (
@@ -233,25 +237,29 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
               {preview.lines.map((l) => (
                 <li
                   key={l.row}
-                  className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 sm:flex-nowrap"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:min-h-11 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto_7rem_7rem] sm:py-1"
                 >
-                  <span className="w-20 shrink-0 text-sm text-muted tabular-nums">
+                  <span className="hidden text-sm text-muted tabular-nums sm:block">
                     {formatDateFr(l.date)}
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-base">{l.label}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="line-clamp-2 text-base break-words sm:truncate">
+                      {l.label}
+                    </span>
                     {l.match && (
                       <span className="truncate text-xs text-muted">
                         Correspond à « {l.match.label} » du {formatDateFr(l.match.occurredOn)}
                       </span>
                     )}
                   </span>
-                  <Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge>
-                  <Amount
-                    cents={l.amountCents}
-                    variant="flow"
-                    className="w-28 text-right text-base"
-                  />
+                  <Badge tone={STATUS[l.status].tone} className="hidden sm:inline-flex">
+                    {STATUS[l.status].label}
+                  </Badge>
+                  <Amount cents={l.amountCents} variant="flow" className="text-right text-base" />
+                  <span className="flex items-center gap-2 text-sm text-muted sm:hidden">
+                    <span className="tabular-nums">{formatDateFr(l.date)}</span>
+                    <Badge tone={STATUS[l.status].tone}>{STATUS[l.status].label}</Badge>
+                  </span>
                   <NativeSelect
                     aria-label={`Action pour la ligne du ${formatDateFr(l.date)} : ${l.label}`}
                     value={actions[l.row] ?? defaultAction(l)}
@@ -259,7 +267,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                     onChange={(e) =>
                       setActions((a) => ({ ...a, [l.row]: e.target.value as ImportAction }))
                     }
-                    className="w-28"
+                    className="w-28 justify-self-end sm:w-full"
                   >
                     {(l.match
                       ? (["link", "create", "skip"] as const)

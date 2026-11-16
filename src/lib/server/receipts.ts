@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
 import {
   accounts,
@@ -54,6 +54,8 @@ export type ReceiptExtraction = {
 
 const OPEN_STATUSES: ReceiptStatus[] = ["uploaded", "processing", "to_review", "manual"];
 const MAX_THUMBNAIL_BYTES = 300 * 1024;
+export const MAX_STORAGE_BYTES = 200 * 1024 * 1024;
+export const MAX_UPLOADS_PER_HOUR = 60;
 
 const sha256 = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
 
@@ -95,6 +97,26 @@ export async function createReceipt(
   };
   const existing = await findExisting();
   if (existing) return ok({ id: existing.id, duplicate: true });
+
+  // Neon Free is shared by all users: per-user storage and upload-rate limits.
+  const [usage] = await db
+    .select({
+      bytes: sql<number>`coalesce(sum(${receiptFiles.sizeBytes}), 0)::bigint`.mapWith(Number),
+    })
+    .from(receiptFiles)
+    .where(eq(receiptFiles.userId, userId));
+  if ((usage?.bytes ?? 0) + input.data.byteLength > MAX_STORAGE_BYTES) {
+    return fail("Espace de stockage des tickets plein (200 Mo) : supprimez d'anciens tickets.");
+  }
+  const [recent] = await db
+    .select({ n: sql<number>`count(*)`.mapWith(Number) })
+    .from(receipts)
+    .where(
+      and(eq(receipts.userId, userId), sql`${receipts.createdAt} > now() - interval '1 hour'`),
+    );
+  if ((recent?.n ?? 0) >= MAX_UPLOADS_PER_HOUR) {
+    return fail("Trop de tickets envoyés en une heure : réessayez plus tard.");
+  }
 
   const id = randomUUID();
   try {
@@ -313,6 +335,11 @@ export async function findBankMatches(
         gte(transactions.occurredOn, from),
         lte(transactions.occurredOn, to),
         isNull(receipts.id),
+        isNotNull(transactions.bankLineKey),
+        sql`not exists (
+          select 1 from ${transactionItems}
+          where ${transactionItems.userId} = ${transactions.userId}
+            and ${transactionItems.transactionId} = ${transactions.id})`,
       ),
     )
     .orderBy(sql`abs(${transactions.occurredOn} - ${date}::date)`, asc(transactions.occurredOn))
@@ -349,7 +376,8 @@ export async function markProcessing(
       and(
         eq(receipts.userId, userId),
         eq(receipts.id, id),
-        inArray(receipts.status, ["uploaded", "processing", "to_review", "manual"]),
+        // Only before the first reading: a read receipt is corrected on the review screen.
+        inArray(receipts.status, ["uploaded", "processing"]),
       ),
     )
     .returning({ id: receipts.id });
@@ -386,7 +414,10 @@ export async function saveExtraction(
   let structurer: ReceiptStructurerName | null = parsed ? "rules" : null;
 
   const chosen = await getStructurer(userId, db);
-  if (chosen !== "rules" && (!validation || validation.level === "low")) {
+  // A model is asked at most once per receipt (first reading), so a client resubmitting
+  // text cannot loop calls on the server's key.
+  const firstReading = current.status === "uploaded" || current.status === "processing";
+  if (chosen !== "rules" && firstReading && (!validation || validation.level === "low")) {
     const file = await storage.get(userId, input.receiptId, "original");
     const modelResult = file ? await structureWithModel(chosen, file, text) : null;
     if (modelResult) {
@@ -503,13 +534,22 @@ export async function confirmReceipt(
             id: transactions.id,
             amountCents: transactions.amountCents,
             kind: transactions.kind,
+            bankLineKey: transactions.bankLineKey,
+            hasItems: sql<boolean>`exists (
+              select 1 from ${transactionItems}
+              where ${transactionItems.userId} = ${transactions.userId}
+                and ${transactionItems.transactionId} = ${transactions.id})`,
           })
           .from(transactions)
           .where(
             and(eq(transactions.userId, userId), eq(transactions.id, input.attachToTransactionId)),
           )
           .for("update");
-        if (!target || target.kind !== "expense") return fail("Mouvement bancaire introuvable.");
+        // Only an imported bank line without lines of its own: never overwrite a movement
+        // the user detailed (its lines may carry claims).
+        if (!target || target.kind !== "expense" || !target.bankLineKey || target.hasItems) {
+          return fail("Mouvement bancaire introuvable.");
+        }
         if (target.amountCents !== -input.totalCents) {
           return fail("Le total du ticket diffère du mouvement bancaire.");
         }

@@ -259,6 +259,17 @@ TOTAL 46,00`);
     expect(r.items).toHaveLength(1);
   });
 
+  it.each([
+    ["digits", "1".repeat(50_000)],
+    ["total then digits", `TOTAL\n${"1".repeat(49_990)}`],
+    ["comma digits", `${"1,".repeat(25_000)}`],
+    ["many short lines", "1,11 KG X 2,22 /KG\n".repeat(3_000)],
+  ])("stays fast on hostile input: %s", (_, input) => {
+    const start = performance.now();
+    parseReceiptText(input);
+    expect(performance.now() - start).toBeLessThan(300);
+  });
+
   it("fixes common OCR letter/digit swaps inside amounts", () => {
     const r = parseReceiptText(`
 PICARD

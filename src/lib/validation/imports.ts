@@ -15,7 +15,7 @@ export const OCR_FAILURE_LABELS: Record<(typeof OCR_FAILURES)[number], string> =
 /** Raw OCR text sent by the browser. The server parses it itself (never trusts a parse). */
 export const extractionInputSchema = z.object({
   receiptId: z.uuid(),
-  ocrText: z.string().max(50_000),
+  ocrText: z.string().max(20_000),
   ocrEngine: z.enum(OCR_ENGINES).nullable(),
   failure: z.enum(OCR_FAILURES).nullable(),
 });

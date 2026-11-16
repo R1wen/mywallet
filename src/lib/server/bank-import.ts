@@ -36,6 +36,8 @@ export type BankPreview = {
 };
 
 const hash = (key: string) => createHash("sha256").update(key).digest("hex");
+/** Hashed header signature: bounded length for the unique index, whatever the CSV. */
+const presetKey = (header: string[]) => hash(headerSignature(header));
 
 /**
  * Parses the CSV and classifies each line against the account (ADR-028): already
@@ -66,7 +68,7 @@ export async function previewBankImport(
       .where(
         and(
           eq(bankImportPresets.userId, userId),
-          eq(bankImportPresets.signature, headerSignature(header)),
+          eq(bankImportPresets.signature, presetKey(header)),
         ),
       );
     mapping = preset?.mapping ?? guessMapping(header);
@@ -252,7 +254,7 @@ export async function commitBankImport(
       .insert(bankImportPresets)
       .values({
         userId,
-        signature: headerSignature(header),
+        signature: presetKey(header),
         mapping: input.mapping,
         accountId: input.accountId,
       })

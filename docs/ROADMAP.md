@@ -81,4 +81,6 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - Repli OCR PaddleOCR (31 Mo de modèles à auto-héberger) : selon le benchmark sur les vrais tickets.
 - Catégorie au niveau de l'article et apprentissage des corrections (import, Sprint 3) : avec les budgets (Sprint 5).
 - Logo.dev (clé gratuite + attribution) comme source de logos supplémentaire (ADR-022).
+- RGPD : export complet des données (y compris fichiers de tickets) et suppression du compte : Sprint 8.
+- Override pnpm d’esbuild ≥ 0.25 (avis modéré, dépendance de développement de drizzle-kit).
 - Évals des skills projet (skill-creator) : à lancer quand les skills auront servi sur un sprint.

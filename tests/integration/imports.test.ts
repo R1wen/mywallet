@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/lib/db/client";
 import {
   bankImportPresets,
+  importSettings,
   receiptFiles,
   receipts,
   transactionItems,
@@ -26,6 +27,7 @@ import {
   getReceiptFile,
   listReceipts,
   markProcessing,
+  MAX_UPLOADS_PER_HOUR,
   rejectReceipt,
   reopenReceipt,
   saveExtraction,
@@ -403,6 +405,8 @@ describe("isolation", () => {
     expect((await listReceipts(B)).map((r) => r.id)).not.toContain(receiptOfA);
     expect(await getReceipt(B, receiptOfA)).toBeNull();
     expect(await getReceiptFile(B, receiptOfA, "original")).toBeNull();
+    expect(await getReceiptFile(B, receiptOfA, "thumbnail")).toBeNull();
+    expect((await reopenReceipt(B, receiptOfA)).ok).toBe(false);
     expect((await markProcessing(B, receiptOfA)).ok).toBe(false);
     expect(
       (
@@ -461,5 +465,88 @@ describe("import settings", () => {
     expect((await saveImportSettings(A, { structurer: "rules", geminiConsent: false })).ok).toBe(
       true,
     );
+  });
+
+  it("B's settings never change A's", async () => {
+    await saveImportSettings(B, { structurer: "rules", geminiConsent: false });
+    const rows = await db.select().from(importSettings).where(eq(importSettings.userId, A));
+    expect(rows.map((r) => r.structurer)).toEqual(["rules"]);
+    expect(
+      (await db.select().from(importSettings).where(eq(importSettings.userId, B))).length,
+    ).toBe(1);
+  });
+});
+
+describe("guards (security review)", () => {
+  it("never attaches a receipt to a movement entered by hand", async () => {
+    const manual = await createTransaction(A, {
+      kind: "expense",
+      amountCents: 1999,
+      occurredOn: "2026-11-12",
+      label: "Saisie",
+      merchantName: "Monoprix",
+      accountId: checking,
+      toAccountId: null,
+      categoryId: null,
+      notes: null,
+    });
+    if (!manual.ok) throw new Error(manual.error);
+    const id = (await upload(A, 80)).id;
+    await saveExtraction(
+      A,
+      {
+        receiptId: id,
+        ocrText: "MONOPRIX\nX 19,99\nTOTAL 19,99\n12/11/2026",
+        ocrEngine: "tesseract",
+        failure: null,
+      },
+      TODAY,
+    );
+    expect((await getReceipt(A, id))?.bankMatches.map((m) => m.id)).not.toContain(manual.data.id);
+    const r = await confirmReceipt(
+      A,
+      id,
+      review({
+        amount: "19,99",
+        occurredOn: "2026-11-12",
+        items: [],
+        returnDeadline: "",
+        attachToTransactionId: manual.data.id,
+      }),
+    );
+    expect(r).toEqual({ ok: false, error: "Mouvement bancaire introuvable." });
+  });
+
+  it("limits uploads per hour", async () => {
+    const [C = ""] = await createUsers(1);
+    try {
+      await db.insert(receipts).values(
+        Array.from({ length: MAX_UPLOADS_PER_HOUR }, (_, i) => ({
+          userId: C,
+          fileKey: `x/${i}`,
+          mimeType: "image/jpeg",
+          sizeBytes: 1,
+          sha256: i.toString(16).padStart(64, "0"),
+        })),
+      );
+      expect(
+        await createReceipt(C, { data: jpeg(90), filename: "x.jpg", thumbnail: null }),
+      ).toEqual({
+        ok: false,
+        error: "Trop de tickets envoyés en une heure : réessayez plus tard.",
+      });
+    } finally {
+      await deleteUsers([C]);
+    }
+  });
+
+  it("a read receipt cannot go back to processing (one model call per receipt)", async () => {
+    const id = (await upload(A, 81)).id;
+    await saveExtraction(
+      A,
+      { receiptId: id, ocrText: TICKET, ocrEngine: "tesseract", failure: null },
+      TODAY,
+    );
+    expect((await markProcessing(A, id)).ok).toBe(false);
   });
 });

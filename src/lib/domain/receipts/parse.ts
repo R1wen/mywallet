@@ -128,17 +128,21 @@ function addMonthsIso(day: string, months: number): string {
 
 type Amount = { cents: number; start: number; end: number };
 
+const MAX_LINES = 600;
+const MAX_LINE_LENGTH = 300;
+
 /** Amounts on a line once dates, times, rates and unit prices are blanked out. */
 function findAmounts(line: string): Amount[] {
   const blank = (s: string) => " ".repeat(s.length);
   const cleaned = line
     .replace(ANY_DATE, blank)
     .replace(/\b\d{1,2}[:h]\d{2}(?::\d{2})?\b/gi, blank)
-    .replace(/\d+(?:[,.]\d+)?\s?%/g, blank)
-    .replace(/\d+[,.]\d+\s*(?:€|EUR)?\s*\/\s*(?:KG|L|U)\b/gi, blank)
-    .replace(/\d+[,.]\d+\s*(?:KG|L)\b/gi, blank);
+    // Leading lookbehind + bounded digit runs: linear time on long digit strings (ReDoS).
+    .replace(/(?<![\d,.])\d{1,7}(?:[,.]\d{1,4})?\s?%/g, blank)
+    .replace(/(?<![\d,.])\d{1,7}[,.]\d{1,4}\s*(?:€|EUR)?\s*\/\s*(?:KG|L|U)\b/gi, blank)
+    .replace(/(?<![\d,.])\d{1,7}[,.]\d{1,4}\s*(?:KG|L)\b/gi, blank);
   const out: Amount[] = [];
-  const re = /(-\s?)?(?<![\d,.])(\d{1,3}(?:\.\d{3})+|\d+)[,.](\d{2})(?![\d,.]?\d)(\s?-)?/g;
+  const re = /(-\s?)?(?<![\d,.])(\d{1,3}(?:\.\d{3}){1,3}|\d{1,9})[,.](\d{2})(?![\d,.]?\d)(\s?-)?/g;
   for (const m of cleaned.matchAll(re)) {
     const units = Number((m[2] ?? "").replace(/\D/g, ""));
     const cents = units * 100 + Number(m[3]);
@@ -190,10 +194,12 @@ const NON_ITEM =
   /TOTAL|\bTVA\b|T\.V\.A|\bHT\b|\bTTC\b|RENDU|MONNAIE|\bPAYER\b|MONTANT|\bCAISSE\b|TICKET|\bTABLE\b|COUVERT|\bTEL\b|SIRET|MERCI|ARTICLES?\b|TRANSACTION|AUTORISATION|\bDEBIT\b|\bCREDIT\b|\bSOLDE\b|\bACOMPTE\b/;
 const HEADER_NOISE =
   /^(TICKET|FACTURE|BIENVENUE|BONJOUR|WELCOME|SIRET|TEL\b|N[°O] |TVA INTRA|DUPLICATA|COPIE)/;
-const FUEL = /(\d+[,.]\d{2,3})\s*L\s*[X*]\s*(\d+[,.]\d{2,3})\s*(?:€|EUR)?\s*\/\s*L/;
+const FUEL =
+  /(?<![\d,.])(\d{1,4}[,.]\d{2,3})\s*L\s*[X*]\s*(\d{1,3}[,.]\d{2,3})\s*(?:€|EUR)?\s*\/\s*L/;
 const FUEL_NAME = /\b(SP ?9[58](?:[- ]?E\d{1,2})?|E10|E85|GAZOLE|GASOIL|DIESEL|GPL|B7|SUPER)\b/;
-const WEIGHT = /(\d+[,.]\d{1,3})\s*KG\s*[X*]\s*(\d+[,.]\d{2})\s*(?:€|EUR)?\s*\/\s*KG/;
-const QTY = /(?<![\d,.])(\d{1,3}(?:[,.]\d{1,3})?)\s*[X*]\s*(\d+[,.]\d{2})(?![\d])/;
+const WEIGHT =
+  /(?<![\d,.])(\d{1,4}[,.]\d{1,3})\s*KG\s*[X*]\s*(\d{1,5}[,.]\d{2})\s*(?:€|EUR)?\s*\/\s*KG/;
+const QTY = /(?<![\d,.])(\d{1,3}(?:[,.]\d{1,3})?)\s*[X*]\s*(\d{1,6}[,.]\d{2})(?![\d])/;
 const LEADING_QTY = /^(\d{1,2})\s*[X*]?\s+(\D.*)$/i;
 
 const decimal = (s: string) => Number(s.replace(",", "."));
@@ -255,6 +261,9 @@ export function parseReceiptText(text: string): ParsedReceipt {
   const lines = text
     .normalize("NFC")
     .split(/\r?\n/)
+    // Real receipt lines are short: bounding them keeps every regex cheap on hostile input.
+    .slice(0, MAX_LINES)
+    .map((l) => l.slice(0, MAX_LINE_LENGTH))
     .map((l) =>
       fixAmountGlyphs(
         l

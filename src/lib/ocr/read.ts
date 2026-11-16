@@ -7,7 +7,7 @@ import { startReading, submitOcr } from "@/lib/actions/imports";
 import { recognize, type OcrProgress } from "./engine";
 import type { OcrSource } from "./prepare";
 
-const MAX_TEXT = 50_000;
+const MAX_TEXT = 20_000;
 
 export async function readReceipt(
   receiptId: string,
