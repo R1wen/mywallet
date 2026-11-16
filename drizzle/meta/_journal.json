@@ -8,6 +8,13 @@
       "when": 1794782412275,
       "tag": "0000_cuddly_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794826470493,
+      "tag": "0001_square_chat",
+      "breakpoints": true
     }
   ]
 }

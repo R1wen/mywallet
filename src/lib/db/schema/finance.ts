@@ -28,15 +28,25 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import { cents, currency, id, inList, ownerId, timestamps } from "./columns";
+import { bytea, cents, currency, id, inList, ownerId, timestamps } from "./columns";
 
 export const ACCOUNT_TYPES = ["checking", "savings", "cash", "credit_card", "other"] as const;
 export const CATEGORY_KINDS = ["expense", "income", "transfer"] as const;
-export const TRANSACTION_KINDS = ["expense", "income", "transfer", "reimbursement"] as const;
+/** `refund` = merchant credit note (ADR-020): money in, lowers spending, not income. */
+export const TRANSACTION_KINDS = [
+  "expense",
+  "income",
+  "transfer",
+  "reimbursement",
+  "refund",
+] as const;
 export const LOGO_SOURCES = ["favicon", "upload", "none"] as const;
 export const RECURRING_KINDS = ["expense", "income"] as const;
 export const RECURRING_FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
 export const RULE_MATCH_TYPES = ["contains", "equals", "starts_with", "merchant"] as const;
+
+/** Uploaded merchant logo size limit (256 KiB). */
+export const MERCHANT_LOGO_MAX_BYTES = 262_144;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export type CategoryKind = (typeof CATEGORY_KINDS)[number];
@@ -128,7 +138,11 @@ export const merchants = pgTable(
       .default(sql`'{}'::text[]`),
     domain: text(),
     logoUrl: text(),
+    /** null = automatic chain (brand icon, favicon, monogram); "upload"; "none" = monogram. */
     logoSource: text().$type<LogoSource>(),
+    /** User-uploaded logo (PNG/JPEG/WebP checked by signature), served by our own route. */
+    logoData: bytea("logo_data"),
+    logoContentType: text(),
     defaultCategoryId: uuid(),
     ...timestamps,
   },
@@ -144,6 +158,12 @@ export const merchants = pgTable(
     check(
       "merchants_logo_source_check",
       sql`${t.logoSource} is null or ${t.logoSource} in (${inList(LOGO_SOURCES)})`,
+    ),
+    check(
+      "merchants_logo_data_check",
+      sql`(${t.logoData} is null and ${t.logoContentType} is null)
+        or (${t.logoContentType} in ('image/png', 'image/jpeg', 'image/webp')
+            and octet_length(${t.logoData}) <= ${sql.raw(String(MERCHANT_LOGO_MAX_BYTES))})`,
     ),
   ],
 );
@@ -289,7 +309,7 @@ export const transactions = pgTable(
     check(
       "transactions_sign_check",
       sql`(${t.kind} = 'expense' and ${t.amountCents} < 0)
-        or (${t.kind} in ('income', 'reimbursement') and ${t.amountCents} > 0)
+        or (${t.kind} in ('income', 'reimbursement', 'refund') and ${t.amountCents} > 0)
         or (${t.kind} = 'transfer' and ${t.amountCents} <> 0)`,
     ),
     check(
