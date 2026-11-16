@@ -148,6 +148,26 @@ Post-traitements proposés (dans le parseur, pas dans le moteur) :
 - **Paddle v6-tiny** : petit (6,4 Mo) mais le moins précis (4,1 %, 62,5 % de dates à cause des espaces perdus).
 - Aucune installation n'a échoué sous Windows : `onnxruntime-node` fonctionne sans exécuter ses scripts d'installation (pnpm les ignore ; les binaires Windows x64 sont inclus dans le paquet).
 
+## Parseur déterministe sur les sorties OCR
+
+Mesuré sur les sorties brutes commitées (`ocr.tesseract.txt`, `ocr.paddle.txt`, `ocr.pdf-text.txt` pour les 2 PDF), 18 tickets. Verrouillé par `src/lib/domain/receipts/parse-fixtures.test.ts` (total et date exacts sur chaque ticket, au moins 90 % pour les articles et la TVA).
+
+| Champ (égalité exacte avec `expected.json`) | tesseract | paddle v6-small |
+| ------------------------------------------- | --------- | --------------- |
+| Total                                       | 18/18     | 18/18           |
+| Date                                        | 18/18     | 18/18           |
+| Heure                                       | 18/18     | 18/18           |
+| Moyen de paiement                           | 18/18     | 18/18           |
+| Remises                                     | 18/18     | 18/18           |
+| Retour / garantie                           | 18/18     | 18/18           |
+| Articles (nombre et montants)               | 17/18     | 18/18           |
+| TVA (taux, base, montant)                   | 17/18     | 17/18           |
+| Magasin brut (avec accents)                 | 17/18     | 16/18           |
+
+Écarts restants : erreurs de lecture (`2x 11,60` pour `2 x 1,60`, `3,12` pour `3,72`, accents perdus sur un en-tête), pas des erreurs du parseur. Le magasin est de toute façon rapproché de l'annuaire après normalisation sans accents.
+
+Corrections apportées au parseur grâce aux fixtures : ligne `2 x 0,85` ou litres détaillant l'article précédent, lignes de TVA sans le mot « TVA », `%` dans un libellé d'article, ligne négative sans mot-clé traitée comme remise, `SOLDES`, heure collée à la date (`25/10/202614:52`).
+
 ## Recommandation (ADR-008)
 
 ADR-008 proposait Paddle en principal et tesseract en repli. **Les mesures inversent l'ordre**, au moins pour la livraison du Sprint 3 :
@@ -157,7 +177,7 @@ ADR-008 proposait Paddle en principal et tesseract en repli. **Les mesures inver
 3. **PDF** : extraire la couche texte avec `pdfjs-dist` ; OCR seulement si le PDF n'a pas de texte (scan).
 4. Dans tous les cas, la sortie passe par Zod, la validation déterministe puis la revue humaine (règle 6).
 
-À reconsidérer après le passage sur les vrais tickets : si Paddle v6-small y bat nettement tesseract (photos réelles, papier froissé, éclairage inégal), inverser défaut et repli ; si v6-tiny y fait jeu égal, le préférer en repli pour son poids.
+**Livré au Sprint 3** : tesseract seul (ADR-008 mis à jour). Le repli Paddle n'est pas livré : ses 31 Mo de modèles devraient être auto-hébergés (CSP `'self'`). À reconsidérer après le passage sur les vrais tickets : si Paddle v6-small y bat nettement tesseract (photos réelles, papier froissé, éclairage inégal), inverser défaut et repli ; si v6-tiny y fait jeu égal, le préférer en repli pour son poids.
 
 ## Reproduire
 

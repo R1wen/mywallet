@@ -41,10 +41,12 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 - Décision : les garder. La coquille (barre latérale, barre supérieure) est prérendue ; tout ce qui lit la session est sous `<Suspense>`.
 - Conséquences : lire `cookies()` hors `<Suspense>` casse le build ; les données utilisateur sont mises en cache par `userId` explicite ou non mises en cache.
 
-## ADR-008 — OCR dans le navigateur (à confirmer au spike du Sprint 3)
+## ADR-008 — OCR dans le navigateur (tranché au Sprint 3)
 
-- Décision provisoire : PaddleOCR (ONNX via onnxruntime-web) en principal, tesseract.js (fra+eng) en repli, exécutés côté client. Le benchmark du Sprint 3 tranche.
-- Conséquences : aucun coût serveur ; le fichier original est conservé, le résultat est revalidé côté serveur (Zod + validation déterministe) avant enregistrement.
+- Benchmark (`docs/OCR-BENCHMARK.md`, 18 fixtures synthétiques) : tesseract.js `fra+eng` lit mieux et plus vite que PaddleOCR PP-OCRv6 (CER 0,3 % contre 0,7 %, 1,2 s contre 7,3 s par ticket), pour 5 Mo téléchargés contre 34,5 Mo.
+- Décision : **tesseract.js 7 par défaut**, dans un Web Worker, fichiers servis depuis l'origine (`public/vendor`, copiés au `postinstall`). Les PDF avec couche texte sont lus par pdf.js, sans OCR. Chaîne de repli : règles → structureur choisi par l'utilisateur (Ollama local ou Gemini, ADR-029) → saisie manuelle à partir de l'image.
+- PaddleOCR (`ppu-paddle-ocr/web`) n'est pas livré au Sprint 3 : 31 Mo de modèles à auto-héberger (CSP `'self'`, ADR-031). À réévaluer avec le benchmark sur les vrais tickets ; si Paddle y gagne nettement, il devient le repli chargé à la demande.
+- Conséquences : aucun coût serveur ; le serveur ne reçoit que le texte brut et le reparse lui-même (Zod + validation déterministe) avant la revue humaine.
 
 ## ADR-009 — File de tâches PostgreSQL
 
