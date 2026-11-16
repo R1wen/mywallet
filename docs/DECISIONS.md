@@ -159,3 +159,9 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-030 — Fixtures publiques synthétiques
 
 - Décision (validée) : les fixtures commitées (`fixtures/receipts/`) sont des tickets français synthétiques réalistes rendus en images (bruit, rotation, papier thermique) et en PDF. Les vrais tickets de l'utilisateur restent dans `fixtures/receipts-private/` (ignoré par git) et ne servent qu'au benchmark local, dont seuls les agrégats sont publiés.
+
+## ADR-031 — Content Security Policy sans nonce
+
+- Contexte : une CSP à nonce oblige à rendre chaque page à la requête ; la doc Next 16 la déclare incompatible avec le prérendu partiel (Cache Components, ADR-007).
+- Décision : CSP fixe dans `next.config.ts` : tout limité à l'origine (`default-src`, `connect-src`, `img-src`, `worker-src` avec `blob:`), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`. `script-src` garde `'unsafe-inline'` (charge RSC en scripts en ligne) et ajoute `'wasm-unsafe-eval'` pour l'OCR WebAssembly, sans `eval()` JavaScript en production.
+- Conséquences : l'exfiltration vers un domaine tiers est bloquée (`connect-src`), mais un script injecté en ligne ne le serait pas : l'échappement React et l'absence de `dangerouslySetInnerHTML` restent la première défense. Les modèles OCR sont servis depuis l'origine (aucun CDN tiers).
