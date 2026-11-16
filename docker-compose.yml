@@ -1,0 +1,48 @@
+# Démarrage local : `docker compose up -d db` (base seule) ou `docker compose up --build` (app + base).
+# Ollama (structuration locale des tickets, Sprint 3+) : `docker compose --profile ollama up -d`.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mywallet
+      POSTGRES_PASSWORD: mywallet
+      POSTGRES_DB: mywallet
+      TZ: Europe/Paris
+    ports:
+      # 5433 côté hôte : évite le conflit avec un PostgreSQL déjà installé sur la machine.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mywallet -d mywallet"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://mywallet:mywallet@db:5432/mywallet
+      BETTER_AUTH_URL: http://localhost:3000
+      # Valeur de développement uniquement. En production : secret GitHub / Vercel.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-change-me-0123456789abcdef}
+      RUN_MIGRATIONS: "1"
+    ports:
+      - "3000:3000"
+
+  ollama:
+    image: ollama/ollama:0.12.6
+    profiles: ["ollama"]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  db-data:
+  ollama-data:

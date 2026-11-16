@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  TZ: Europe/Paris
+  # Valeurs CI uniquement (base éphémère du service Postgres, aucun secret réel).
+  DATABASE_URL: postgres://mywallet:mywallet@localhost:5432/mywallet
+  TEST_DATABASE_URL: postgres://mywallet:mywallet@localhost:5432/mywallet_test
+  BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+  BETTER_AUTH_URL: http://localhost:3000
+
+jobs:
+  quality:
+    name: Lint, format, typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+
+  test:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mywallet
+          POSTGRES_PASSWORD: mywallet
+          POSTGRES_DB: mywallet_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mywallet" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Unit tests with domain coverage gate (80 %)
+        run: pnpm test:coverage
+      - name: Integration tests (real PostgreSQL)
+        run: pnpm test:int
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mywallet
+          POSTGRES_PASSWORD: mywallet
+          POSTGRES_DB: mywallet
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mywallet" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm db:migrate
+      - run: pnpm build
+      - name: Run Playwright against the production build
+        run: pnpm e2e
+        env:
+          E2E_START_COMMAND: pnpm start
+      - name: Upload Playwright report and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  security:
+    name: Dependency audit and secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      # Pas de cache pnpm : l'audit lit le lockfile sans installer, le store n'existe pas.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Audit production dependencies (high and critical)
+        run: pnpm audit --prod --audit-level high
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

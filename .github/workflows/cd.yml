@@ -1,0 +1,133 @@
+name: CD
+
+# Déploie uniquement quand la CI est verte sur main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: Docker image (GHCR)
+    # Frontière de confiance : uniquement un push sur main de CE dépôt (jamais une PR, jamais un fork,
+    # même si sa branche s'appelle "main"), ou un lancement manuel depuis main.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Vercel (production)
+    needs: [image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    # Secrets passés étape par étape (jamais au niveau du job : `pnpm install` ne les voit pas).
+    steps:
+      - name: Check deployment secrets
+        id: guard
+        env:
+          HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
+          HAS_VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID != '' }}
+          HAS_VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID != '' }}
+          HAS_PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL != '' }}
+        run: |
+          missing=""
+          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_DATABASE_URL; do
+            flag="HAS_$v"
+            [ "${!flag}" != "true" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Déploiement ignoré : secrets manquants :$missing (voir docs/DEPLOY.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.guard.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v6
+        if: steps.guard.outputs.ready == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.guard.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.guard.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Apply database migrations (Neon)
+        if: steps.guard.outputs.ready == 'true'
+        # Migrations additives uniquement (expand/contract) : l'ancienne version reste compatible.
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: pnpm db:migrate
+      - name: Build and deploy with Vercel CLI
+        id: deploy
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          pnpm dlx vercel@65.16.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+          pnpm dlx vercel@65.16.0 build --prod --token="$VERCEL_TOKEN"
+          url=$(pnpm dlx vercel@65.16.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Health check
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          # Domaine public de production (variable GitHub PRODUCTION_URL) : l'URL brute du
+          # déploiement est protégée par la « Deployment Protection » de Vercel (401).
+          TARGET_URL: ${{ vars.PRODUCTION_URL || steps.deploy.outputs.url }}
+        run: |
+          for i in $(seq 1 20); do
+            body=$(curl -fsS "$TARGET_URL/api/health" || true)
+            echo "$body" | grep -q '"status":"ok"' && { echo "Healthy: $body"; exit 0; }
+            sleep 6
+          done
+          echo "::error::/api/health ne répond pas 'ok'. Procédure de retour arrière : docs/DEPLOY.md#retour-arrière"
+          exit 1
