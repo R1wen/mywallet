@@ -41,8 +41,11 @@ export const TRANSACTION_KINDS = [
   "refund",
 ] as const;
 export const LOGO_SOURCES = ["favicon", "upload", "none"] as const;
-export const RECURRING_KINDS = ["expense", "income"] as const;
+/** `transfer` = recurring saving from one account to another (ADR-026). */
+export const RECURRING_KINDS = ["expense", "income", "transfer"] as const;
 export const RECURRING_FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
+/** planned = generated, not in the balance; confirmed = linked transaction; skipped = ignored. */
+export const OCCURRENCE_STATUSES = ["planned", "confirmed", "skipped"] as const;
 export const RULE_MATCH_TYPES = ["contains", "equals", "starts_with", "merchant"] as const;
 
 /** Uploaded merchant logo size limit (256 KiB). */
@@ -54,6 +57,7 @@ export type TransactionKind = (typeof TRANSACTION_KINDS)[number];
 export type LogoSource = (typeof LOGO_SOURCES)[number];
 export type RecurringKind = (typeof RECURRING_KINDS)[number];
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
+export type OccurrenceStatus = (typeof OCCURRENCE_STATUSES)[number];
 export type RuleMatchType = (typeof RULE_MATCH_TYPES)[number];
 
 /* -------------------------------------------------------------------------- */
@@ -172,13 +176,18 @@ export const merchants = pgTable(
 /* Recurring rules                                                            */
 /* -------------------------------------------------------------------------- */
 
-/** Expected periodic movement (rent, salary, subscriptions). Same sign convention as transactions. */
+/**
+ * Expected periodic movement (rent, salary, subscriptions, savings). Same sign convention as
+ * transactions; a `transfer` (saving) stores the negative debit of `account_id` and its
+ * destination in `to_account_id`. `next_run_on` is the generation cursor (ADR-024).
+ */
 export const recurringRules = pgTable(
   "recurring_rules",
   {
     id: id(),
     userId: ownerId(),
     accountId: uuid().notNull(),
+    toAccountId: uuid(),
     kind: text().$type<RecurringKind>().notNull(),
     label: text().notNull(),
     amountCents: cents("amount_cents").notNull(),
@@ -207,6 +216,11 @@ export const recurringRules = pgTable(
       foreignColumns: [accounts.userId, accounts.id],
     }),
     foreignKey({
+      name: "recurring_rules_to_account_fk",
+      columns: [t.userId, t.toAccountId],
+      foreignColumns: [accounts.userId, accounts.id],
+    }),
+    foreignKey({
       name: "recurring_rules_merchant_fk",
       columns: [t.userId, t.merchantId],
       foreignColumns: [merchants.userId, merchants.id],
@@ -219,7 +233,10 @@ export const recurringRules = pgTable(
     check("recurring_rules_kind_check", sql`${t.kind} in (${inList(RECURRING_KINDS)})`),
     check(
       "recurring_rules_sign_check",
-      sql`(${t.kind} = 'expense' and ${t.amountCents} < 0) or (${t.kind} = 'income' and ${t.amountCents} > 0)`,
+      sql`(${t.kind} = 'expense' and ${t.amountCents} < 0 and ${t.toAccountId} is null)
+        or (${t.kind} = 'income' and ${t.amountCents} > 0 and ${t.toAccountId} is null)
+        or (${t.kind} = 'transfer' and ${t.amountCents} < 0 and ${t.toAccountId} is not null
+            and ${t.toAccountId} <> ${t.accountId})`,
     ),
     check(
       "recurring_rules_frequency_check",
@@ -357,6 +374,55 @@ export const transactionItems = pgTable(
     check("transaction_items_quantity_check", sql`${t.quantity} > 0`),
     check("transaction_items_position_check", sql`${t.position} >= 0`),
     check("transaction_items_label_check", sql`btrim(${t.label}) <> ''`),
+  ],
+);
+
+/**
+ * One due date of a recurring rule (ADR-024). Generated once per (rule, due date) as
+ * `planned`: shown in the calendar and counted in the "reste à vivre", never in a balance.
+ * Validating it creates the real transaction (amount adjustable) and links it here; for a
+ * saving, the link is the debit leg of the transfer.
+ */
+export const recurringOccurrences = pgTable(
+  "recurring_occurrences",
+  {
+    id: id(),
+    userId: ownerId(),
+    ruleId: uuid().notNull(),
+    dueOn: date({ mode: "string" }).notNull(),
+    /** Expected amount (rule's amount when generated), signed like the rule. */
+    amountCents: cents("amount_cents").notNull(),
+    currency: currency(),
+    status: text().$type<OccurrenceStatus>().notNull().default("planned"),
+    transactionId: uuid(),
+    ...timestamps,
+  },
+  (t) => [
+    unique("recurring_occurrences_user_id_id_key").on(t.userId, t.id),
+    // Idempotent generation: a rule never has two occurrences on the same day.
+    unique("recurring_occurrences_rule_due_key").on(t.userId, t.ruleId, t.dueOn),
+    unique("recurring_occurrences_transaction_key").on(t.userId, t.transactionId),
+    // Calendar and "reste à vivre" by month.
+    index("recurring_occurrences_user_due_idx").on(t.userId, t.dueOn),
+    foreignKey({
+      name: "recurring_occurrences_rule_fk",
+      columns: [t.userId, t.ruleId],
+      foreignColumns: [recurringRules.userId, recurringRules.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "recurring_occurrences_transaction_fk",
+      columns: [t.userId, t.transactionId],
+      foreignColumns: [transactions.userId, transactions.id],
+    }),
+    check(
+      "recurring_occurrences_status_check",
+      sql`${t.status} in (${inList(OCCURRENCE_STATUSES)})`,
+    ),
+    check(
+      "recurring_occurrences_link_check",
+      sql`(${t.status} = 'confirmed') = (${t.transactionId} is not null)`,
+    ),
+    check("recurring_occurrences_amount_check", sql`${t.amountCents} <> 0`),
   ],
 );
 
