@@ -16,6 +16,9 @@ import { Pool } from "pg";
 import { buildCatalogRows } from "../src/lib/catalog";
 import { toParisDateString, daysInMonth } from "../src/lib/domain/dates";
 import { formatCents } from "../src/lib/domain/money";
+import { findMerchantByLabel, normalizeMerchantName } from "../src/lib/domain/merchant";
+import { parseReceiptText } from "../src/lib/domain/receipts/parse";
+import { duplicateKey, validateReceipt } from "../src/lib/domain/receipts/validate";
 import * as schema from "../src/lib/db/schema";
 
 const DEMO_USER_ID = "demo-user-mywallet";
@@ -838,6 +841,10 @@ async function main(): Promise<void> {
       await tx.insert(schema.budgets).values(budgetRows);
       await tx.insert(schema.goals).values(goalRows);
       await tx.insert(schema.categorizationRules).values(ruleRowsCategorization);
+      for (const r of await receiptRows()) {
+        await tx.insert(schema.receipts).values(r.receipt);
+        await tx.insert(schema.receiptFiles).values(r.files);
+      }
     });
 
     printSummary();
@@ -863,6 +870,105 @@ function occurrenceRows(): (typeof schema.recurringOccurrences.$inferInsert)[] {
       status: "confirmed" as const,
       transactionId: t.id!,
     }));
+}
+
+/**
+ * Demo receipts from the synthetic fixtures (ADR-030), as the browser would leave them:
+ * three read by OCR and waiting for review, one to enter by hand. Skipped when the
+ * fixtures folder is absent (e.g. Docker image).
+ */
+async function receiptRows() {
+  const { createHash } = await import("node:crypto");
+  const { existsSync, readFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const root = join(process.cwd(), "fixtures", "receipts");
+  if (!existsSync(root)) return [];
+  const sharp = (await import("sharp")).default;
+  const known = merchantRows.map((m) => ({
+    id: m.id!,
+    name: m.name,
+    normalizedName: m.normalizedName,
+    aliases: m.aliases ?? [],
+  }));
+  const picks = [
+    { id: "carrefour-2026-11-01", read: true },
+    { id: "kiabi-2026-10-01", read: true },
+    { id: "pharmacie-2026-11-01", read: true },
+    { id: "boulangerie-2026-11-01", read: false },
+  ];
+  const rows = [];
+  for (const [i, pick] of picks.entries()) {
+    const dir = join(root, pick.id);
+    const file = ["source.jpg", "source.png"].map((f) => join(dir, f)).find(existsSync);
+    if (!file) continue;
+    const data = readFileSync(file);
+    const mimeType = file.endsWith(".png") ? "image/png" : "image/jpeg";
+    const thumbnail = await sharp(data)
+      .resize(320, 320, { fit: "inside" })
+      .jpeg({ quality: 70 })
+      .toBuffer();
+    const id = uuid();
+    const text = pick.read ? readFileSync(join(dir, "ocr.tesseract.txt"), "utf8") : "";
+    const parsed = pick.read ? parseReceiptText(text) : null;
+    const validation = parsed ? validateReceipt(parsed, TODAY) : null;
+    const match = parsed?.merchantRaw ? findMerchantByLabel(parsed.merchantRaw, known) : null;
+    const merchantName =
+      match?.name ??
+      (parsed?.merchantRaw
+        ? normalizeMerchantName(parsed.merchantRaw).replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase())
+        : null);
+    const createdAt = new Date(Date.now() - (picks.length - i) * 3_600_000);
+    rows.push({
+      receipt: {
+        id,
+        userId: DEMO_USER_ID,
+        fileKey: `${id}/original`,
+        originalFilename: `${pick.id}.${mimeType === "image/png" ? "png" : "jpg"}`,
+        mimeType,
+        sizeBytes: data.byteLength,
+        sha256: createHash("sha256").update(data).digest("hex"),
+        status: parsed ? ("to_review" as const) : ("manual" as const),
+        ocrText: text || null,
+        ocrEngine: parsed ? "tesseract" : null,
+        structurer: parsed ? "rules" : null,
+        failureReason: parsed ? null : "empty",
+        extracted:
+          parsed && validation
+            ? {
+                parsed,
+                merchantName,
+                merchantId: match?.id ?? null,
+                level: validation.level,
+                issues: validation.issues,
+                duplicateOfId: null,
+              }
+            : null,
+        confidence: validation?.confidence ?? null,
+        duplicateKey: parsed ? duplicateKey(merchantName, parsed.date, parsed.totalCents) : null,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      files: [
+        {
+          userId: DEMO_USER_ID,
+          receiptId: id,
+          kind: "original" as const,
+          mimeType,
+          sizeBytes: data.byteLength,
+          data,
+        },
+        {
+          userId: DEMO_USER_ID,
+          receiptId: id,
+          kind: "thumbnail" as const,
+          mimeType: "image/jpeg",
+          sizeBytes: thumbnail.byteLength,
+          data: thumbnail,
+        },
+      ],
+    });
+  }
+  return rows;
 }
 
 /** Counts plus a sanity check of the financial rules on the generated data. */
