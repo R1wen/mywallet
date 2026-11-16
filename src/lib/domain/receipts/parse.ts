@@ -348,6 +348,8 @@ export function parseReceiptText(text: string): ParsedReceipt {
   let discountsCents = 0;
   let pendingLabel: string | null = null;
   let pendingFuel: string | null = null;
+  /** Quantity line printed before its label ("2 x 1,10  2,20" then "CROISSANT"). */
+  let pendingItem: Omit<ReceiptItem, "label"> | null = null;
 
   for (let i = merchantIndex + 1; i < end; i++) {
     const line = lines[i] ?? "";
@@ -379,7 +381,10 @@ export function parseReceiptText(text: string): ParsedReceipt {
     const amounts = findAmounts(line);
     if (!amounts.length) {
       if (DISCOUNT.test(k) || NON_ITEM.test(k) || !hasLetters(line)) pendingLabel = null;
-      else if (!FUEL_NAME.test(k)) pendingLabel = cleanLabel(line);
+      else if (pendingItem) {
+        items.push({ label: cleanLabel(line), ...pendingItem });
+        pendingItem = null;
+      } else if (!FUEL_NAME.test(k)) pendingLabel = cleanLabel(line);
       continue;
     }
     const last = amounts[amounts.length - 1] as Amount;
@@ -400,7 +405,17 @@ export function parseReceiptText(text: string): ParsedReceipt {
     let label = cleanLabel(before);
     if (!hasLetters(label)) label = pendingLabel ?? "";
     pendingLabel = null;
-    if (!label) continue;
+    if (!label) {
+      if (weight || qty) {
+        const m = (weight ?? qty)!;
+        pendingItem = {
+          quantity: decimal(m[1] ?? ""),
+          unitPriceCents: roundCents(decimal(m[2] ?? "") * 100),
+          totalCents: last.cents,
+        };
+      }
+      continue;
+    }
 
     if (weight) {
       items.push({
@@ -433,6 +448,9 @@ export function parseReceiptText(text: string): ParsedReceipt {
     }
     items.push({ label, quantity: 1, unitPriceCents: last.cents, totalCents: last.cents });
   }
+
+  // A quantity line whose label was never read still counts toward the sum.
+  if (pendingItem) items.push({ label: "Article", ...pendingItem });
 
   // Return and warranty deadlines.
   let returnDeadline: string | null = null;

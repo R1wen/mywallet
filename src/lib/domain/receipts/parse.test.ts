@@ -221,6 +221,20 @@ CB 2,30
     expect(r.totalCents).toBe(230);
   });
 
+  it("attaches a quantity line printed before its label", () => {
+    const r = parseReceiptText(`
+BOULANGERIE MARIE
+BAGUETTE TRADITION 1,30
+   2 x 1,10   2,20
+CROISSANT
+TOTAL TTC 3,50
+`);
+    expect(r.items).toEqual([
+      { label: "BAGUETTE TRADITION", quantity: 1, unitPriceCents: 130, totalCents: 130 },
+      { label: "CROISSANT", quantity: 2, unitPriceCents: 110, totalCents: 220 },
+    ]);
+  });
+
   it("fixes common OCR letter/digit swaps inside amounts", () => {
     const r = parseReceiptText(`
 PICARD

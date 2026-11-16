@@ -60,6 +60,12 @@ function defaults(
   };
 }
 
+/** Warning hint (not an error) under a field the deterministic checks are unsure about. */
+function doubtHint(receipt: ReceiptDetail, field: ReviewField) {
+  const message = doubt(receipt, field);
+  return message ? <span className="text-warning">{message}</span> : undefined;
+}
+
 /** "À vérifier" under a field the deterministic checks are not sure about. */
 function doubt(receipt: ReceiptDetail, field: ReviewField): string | undefined {
   const score = receipt.confidence?.[field];
@@ -180,7 +186,8 @@ export function ReviewForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Magasin"
-          error={errors.merchantName?.message ?? doubt(receipt, "merchant")}
+          error={errors.merchantName?.message}
+          hint={doubtHint(receipt, "merchant")}
           className="sm:col-span-2"
         >
           {({ id, describedBy, invalid }) => (
@@ -201,7 +208,7 @@ export function ReviewForm({
             </>
           )}
         </Field>
-        <Field label="Total payé" error={errors.amount?.message ?? doubt(receipt, "total")}>
+        <Field label="Total payé" error={errors.amount?.message} hint={doubtHint(receipt, "total")}>
           {({ id, describedBy, invalid }) => (
             <div className="relative">
               <Input
@@ -222,8 +229,8 @@ export function ReviewForm({
         </Field>
         <Field
           label="Date d'achat"
-          error={errors.occurredOn?.message ?? doubt(receipt, "date")}
-          hint={attached ? "La date du relevé est conservée." : undefined}
+          error={errors.occurredOn?.message}
+          hint={attached ? "La date du relevé est conservée." : doubtHint(receipt, "date")}
         >
           {({ id, describedBy, invalid }) => (
             <Input
