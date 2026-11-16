@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { merchantInputSchema } from "./merchant";
+import { occurrenceConfirmSchema, recurringRuleInputSchema } from "./recurring";
 import { accountInputSchema } from "./settings";
 import { parseTransactionFilters, transactionInputSchema } from "./transaction";
 
@@ -127,6 +128,71 @@ it("rejects a doubled sign instead of flipping it", () => {
     openingBalance: "--120,50",
   });
   expect(r.success).toBe(false);
+});
+
+describe("recurringRuleInputSchema", () => {
+  const rule = {
+    kind: "expense" as const,
+    label: "",
+    amount: "890",
+    merchantName: "Foncia",
+    accountId: A,
+    toAccountId: "",
+    categoryId: "",
+    frequency: "monthly" as const,
+    interval: "1",
+    dayOfMonth: "5",
+    startOn: "2026-11-05",
+    endOn: "",
+  };
+
+  it("signs the amount by kind and keeps the day only for monthly and yearly rules", () => {
+    expect(recurringRuleInputSchema.parse(rule)).toMatchObject({
+      amountCents: -89_000,
+      label: "Foncia",
+      dayOfMonth: 5,
+      interval: 1,
+      endOn: null,
+      toAccountId: null,
+    });
+    expect(recurringRuleInputSchema.parse({ ...rule, kind: "income" }).amountCents).toBe(89_000);
+    expect(recurringRuleInputSchema.parse({ ...rule, frequency: "weekly" }).dayOfMonth).toBeNull();
+    expect(
+      recurringRuleInputSchema.parse({
+        ...rule,
+        kind: "transfer",
+        label: "Épargne",
+        toAccountId: B,
+      }),
+    ).toMatchObject({ amountCents: -89_000, toAccountId: B, merchantName: "" });
+  });
+
+  it.each([
+    [{ amount: "0" }, "Montant invalide."],
+    [{ dayOfMonth: "32" }, "Jour entre 1 et 31."],
+    [{ interval: "0" }, "Intervalle invalide."],
+    [{ label: "", merchantName: "" }, "Saisissez un libellé."],
+    [{ kind: "transfer", toAccountId: B, label: "" }, "Saisissez un libellé."],
+    [{ kind: "transfer", label: "Épargne", toAccountId: "" }, "Choisissez le compte d'épargne."],
+    [{ kind: "transfer", label: "Épargne", toAccountId: A }, "Choisissez deux comptes différents."],
+    [{ endOn: "2026-11-01" }, "La fin précède le début."],
+    [{ startOn: "2026-02-30" }, "Date invalide."],
+  ])("%j -> %s", (patch, message) => {
+    expect(firstMessage(recurringRuleInputSchema.safeParse({ ...rule, ...patch }))).toBe(message);
+  });
+});
+
+describe("occurrenceConfirmSchema", () => {
+  it("parses the real amount as a positive magnitude", () => {
+    expect(
+      occurrenceConfirmSchema.parse({ amount: "78,40", occurredOn: "2026-11-08", accountId: A }),
+    ).toEqual({ magnitudeCents: 7840, occurredOn: "2026-11-08", accountId: A });
+    expect(
+      firstMessage(
+        occurrenceConfirmSchema.safeParse({ amount: "-3", occurredOn: "2026-11-08", accountId: A }),
+      ),
+    ).toBe("Montant invalide.");
+  });
 });
 
 describe("merchantInputSchema", () => {

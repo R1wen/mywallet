@@ -15,6 +15,13 @@
       "when": 1794826470493,
       "tag": "0001_square_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794844540489,
+      "tag": "0002_complex_franklin_richards",
+      "breakpoints": true
     }
   ]
 }

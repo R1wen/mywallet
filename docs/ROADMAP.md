@@ -1,12 +1,12 @@
-# Roadmap myWallet
+﻿# Roadmap myWallet
 
 Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI verte)
 
 | Sprint | Thème                                                                        | Branche               | État         |
 | ------ | ---------------------------------------------------------------------------- | --------------------- | ------------ |
 | 0      | Fondations                                                                   | `sprint/0-fondations` | [x]          |
-| 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [~] en cours |
-| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [ ]          |
+| 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [x]          |
+| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [~] en cours |
 | 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [ ]          |
 | 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [ ]          |
 | 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [ ]          |
@@ -41,7 +41,21 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Tests : 217 unitaires (domaine 97 %), 44 intégration, 14 e2e (dépense en moins de 10 s)
 - [x] Captures (`docs/screens/sprint-1/`), `ui-reviewer` (2 itérations, tous les écrans validés), `/code-review` (10 corrections appliquées)
 - [x] PR #2, CI verte
-- [ ] Vérifier : récapitulatif, STOP (puis déploiement Neon + Vercel par l'utilisateur)
+- [x] Vérifier : récapitulatif, STOP
+- [x] Déploiement : Neon (Francfort) + Vercel, https://mywallet-priv.vercel.app, CD vert (PR #3 : variables vides au build)
+
+## Sprint 2 : Récurrent
+
+- [x] Décisions validées : échéances prévues puis validées, reste à vivre = solde disponible − charges restantes + revenus attendus, épargne = virement (ADR-024 à 026)
+- [x] Domaine (TDD) : dates de récurrence (jours 29 à 31, bissextiles, hebdo/mensuel/annuel, intervalle), curseur de génération idempotent, reste à vivre et montant utilisable par jour
+- [x] Schéma : migration 0002 additive (`recurring_occurrences`, compte d'épargne sur la règle)
+- [x] Serveur : règles (CRUD), génération paresseuse sans doublon (verrou + unicité), validation avec montant réel, ignorer, annuler ; isolation A/B testée
+- [x] UI : écran Récurrent (calendrier, agenda mobile, règles), fenêtres règle et échéance, carte reste à vivre du tableau de bord
+- [x] Tests : domaine, validation, composant formulaire de règle, 18 intégration, e2e (règle due aujourd'hui validée depuis le tableau de bord)
+- [x] Captures (`docs/screens/sprint-2/`), `ui-reviewer` (corrections : cibles tactiles 44 px des boutons, prochaine échéance réelle, signe des revenus validés, mise en page mobile)
+- [x] `/code-review` (10 corrections : jambe débitrice stable d'un virement, replanification sans doublon dans un mois validé, échéances en retard suivant le type de la règle, libellé d'épargne, requêtes en double)
+- [x] PR #4, CI verte
+- [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
