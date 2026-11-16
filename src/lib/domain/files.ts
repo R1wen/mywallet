@@ -63,14 +63,24 @@ export function checkUpload(input: { type: UploadType | null; size: number }): s
 
 const MAX_NAME = 120;
 
+/** Control characters, zero-width characters and bidi overrides (spoofed extensions). */
+function isInvisible(code: number): boolean {
+  return (
+    code <= 0x1f ||
+    code === 0x7f ||
+    (code >= 0x200b && code <= 0x200f) ||
+    (code >= 0x202a && code <= 0x202e) ||
+    (code >= 0x2066 && code <= 0x2069)
+  );
+}
+
 /**
  * Display-only file name: last path segment, no control/bidi characters, no markup
  * characters, at most 120 characters with the extension kept. Never used as a path.
  */
 export function sanitizeFilename(raw: string): string {
   const base = raw.split(/[\\/]/).pop() ?? "";
-
-  let name = base.replace(/[\u0000-\u001f\u007f​-‏‪-‮⁦-⁩]/g, "");
+  let name = [...base].filter((c) => !isInvisible(c.codePointAt(0) ?? 0)).join("");
   name = name.replace(/[<>:"|?*]/g, "").trim();
   if (!name.replace(/\./g, "")) return "fichier";
   if (name.length <= MAX_NAME) return name;
