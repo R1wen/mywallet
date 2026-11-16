@@ -38,7 +38,7 @@ async function main() {
   const outDir = path.join("docs", "screens", `sprint-${sprint}`);
   await mkdir(outDir, { recursive: true });
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--lang=fr-FR"] });
   const errors: string[] = [];
   for (const vp of VIEWPORTS) {
     const context = await browser.newContext({
