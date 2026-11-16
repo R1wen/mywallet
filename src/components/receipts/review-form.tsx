@@ -329,11 +329,12 @@ export function ReviewForm({
                 return (
                   <li
                     key={field.id}
-                    className="grid grid-cols-[minmax(0,1fr)_4rem_6.5rem_2.75rem] items-center gap-2 px-2 py-1.5"
+                    className="grid grid-cols-[4rem_minmax(0,1fr)_2.75rem] items-center gap-2 px-2 py-2 sm:grid-cols-[minmax(0,1fr)_4rem_6.5rem_2.75rem] sm:py-1.5"
                   >
                     <Input
                       aria-label={`Libellé de la ligne ${index + 1}`}
                       aria-invalid={Boolean(err?.label)}
+                      className="col-span-3 sm:col-span-1"
                       autoComplete="off"
                       {...form.register(`items.${index}.label`)}
                     />

@@ -517,6 +517,62 @@ describe("guards (security review)", () => {
     expect(r).toEqual({ ok: false, error: "Mouvement bancaire introuvable." });
   });
 
+  it("flags receipts that have a thumbnail", async () => {
+    const thumb = jpeg(91);
+    const r = await createReceipt(A, { data: jpeg(92), filename: "t.jpg", thumbnail: thumb });
+    if (!r.ok) throw new Error(r.error);
+    expect((await listReceipts(A)).find((x) => x.id === r.data.id)?.hasThumbnail).toBe(true);
+    expect((await getReceipt(A, r.data.id))?.hasThumbnail).toBe(true);
+    const plain = await upload(A, 93);
+    expect((await listReceipts(A)).find((x) => x.id === plain.id)?.hasThumbnail).toBe(false);
+  });
+
+  it("never attaches to an imported movement that already has lines", async () => {
+    const file = CSV(["13/11/2026;CB PICARD 13/11;31,40;"]);
+    const preview = await previewBankImport(A, { accountId: checking, csv: file, mapping: null });
+    if (!preview.ok || !preview.data.mapping) throw new Error("preview");
+    await commitBankImport(A, {
+      accountId: checking,
+      csv: file,
+      mapping: preview.data.mapping,
+      decisions: [],
+    });
+    const [line] = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(and(eq(transactions.userId, A), eq(transactions.bankLabel, "CB PICARD 13/11")));
+    await db.insert(transactionItems).values({
+      userId: A,
+      transactionId: line!.id,
+      label: "Glaces",
+      totalCents: 3140,
+    });
+    const id = (await upload(A, 94)).id;
+    await saveExtraction(
+      A,
+      {
+        receiptId: id,
+        ocrText: "PICARD\nGLACES 31,40\nTOTAL 31,40\n13/11/2026",
+        ocrEngine: "tesseract",
+        failure: null,
+      },
+      TODAY,
+    );
+    expect((await getReceipt(A, id))?.bankMatches.map((m) => m.id)).not.toContain(line!.id);
+    const r = await confirmReceipt(
+      A,
+      id,
+      review({
+        amount: "31,40",
+        occurredOn: "2026-11-13",
+        items: [],
+        returnDeadline: "",
+        attachToTransactionId: line!.id,
+      }),
+    );
+    expect(r).toEqual({ ok: false, error: "Mouvement bancaire introuvable." });
+  });
+
   it("limits uploads per hour", async () => {
     const [C = ""] = await createUsers(1);
     try {

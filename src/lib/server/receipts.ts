@@ -199,11 +199,13 @@ export async function listReceipts(
       createdAt: receipts.createdAt,
       extracted: receipts.extracted,
       transactionId: receipts.transactionId,
+      // Explicit aliases: Drizzle renders columns unqualified inside sql``, which would
+      // resolve to the subquery's own table.
       hasThumbnail: sql<boolean>`exists (
-        select 1 from ${receiptFiles}
-        where ${receiptFiles.userId} = ${receipts.userId}
-          and ${receiptFiles.receiptId} = ${receipts.id}
-          and ${receiptFiles.kind} = 'thumbnail')`,
+        select 1 from receipt_files f
+        where f.user_id = ${receipts}.user_id
+          and f.receipt_id = ${receipts}.id
+          and f.kind = 'thumbnail')`,
     })
     .from(receipts)
     .where(
@@ -337,9 +339,9 @@ export async function findBankMatches(
         isNull(receipts.id),
         isNotNull(transactions.bankLineKey),
         sql`not exists (
-          select 1 from ${transactionItems}
-          where ${transactionItems.userId} = ${transactions.userId}
-            and ${transactionItems.transactionId} = ${transactions.id})`,
+          select 1 from transaction_items i
+          where i.user_id = ${transactions}.user_id
+            and i.transaction_id = ${transactions}.id)`,
       ),
     )
     .orderBy(sql`abs(${transactions.occurredOn} - ${date}::date)`, asc(transactions.occurredOn))
@@ -536,9 +538,9 @@ export async function confirmReceipt(
             kind: transactions.kind,
             bankLineKey: transactions.bankLineKey,
             hasItems: sql<boolean>`exists (
-              select 1 from ${transactionItems}
-              where ${transactionItems.userId} = ${transactions.userId}
-                and ${transactionItems.transactionId} = ${transactions.id})`,
+              select 1 from transaction_items i
+              where i.user_id = ${transactions}.user_id
+                and i.transaction_id = ${transactions}.id)`,
           })
           .from(transactions)
           .where(
