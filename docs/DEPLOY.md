@@ -9,7 +9,8 @@ Le déploiement est automatique : à chaque push sur `main`, la CI tourne ; si e
 3. Variables d'environnement Vercel (Production) :
    - `DATABASE_URL` = chaîne Neon
    - `BETTER_AUTH_SECRET` = `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`
-   - `BETTER_AUTH_URL` = URL de production (ex. `https://mywallet-xxx.vercel.app`)
+   - `BETTER_AUTH_URL` = URL de production (actuellement `https://mywallet-priv.vercel.app`, domaine ajouté dans Vercel > Settings > Domains)
+   - Ne pas cocher « Sensitive » : le build se fait dans la CI après `vercel pull`, qui ne récupère pas les valeurs sensibles (elles arriveraient vides et le build échouerait). Les variables restent chiffrées.
 4. Jeton Vercel : Account Settings > Tokens. Identifiants : `pnpm dlx vercel link` puis lire `.vercel/project.json` (`orgId`, `projectId`).
 5. Secrets GitHub (Settings > Secrets and variables > Actions), dans l'environnement `production` :
    - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
