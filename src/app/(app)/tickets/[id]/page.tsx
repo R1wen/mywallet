@@ -41,10 +41,7 @@ async function Ticket({ params }: Pick<PageProps<"/tickets/[id]">, "params">) {
   if (!receipt) notFound();
   const today = toParisDateString(new Date());
 
-  const title =
-    receipt.extraction?.merchantName ??
-    receipt.filename ??
-    `Ticket du ${formatDateFr(receipt.createdAt)}`;
+  const title = receipt.extraction?.merchantName ?? `Ticket du ${formatDateFr(receipt.createdAt)}`;
   const reviewable = receipt.status === "to_review" || receipt.status === "manual";
   const reading = receipt.status === "uploaded" || receipt.status === "processing";
 

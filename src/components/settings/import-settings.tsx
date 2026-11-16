@@ -71,7 +71,7 @@ export function ImportSettings({
                 key={o.value}
                 className={cn(
                   "flex min-h-11 cursor-pointer gap-3 rounded-sm border border-border px-3 py-2 has-checked:border-accent",
-                  !enabled && "cursor-not-allowed opacity-50",
+                  !enabled && "cursor-not-allowed",
                 )}
               >
                 <input
@@ -81,10 +81,10 @@ export function ImportSettings({
                   checked={value === o.value}
                   disabled={!enabled}
                   onChange={() => setValue(o.value)}
-                  className="mt-1 accent-[var(--accent)]"
+                  className="mt-1 accent-[var(--accent)] disabled:opacity-50"
                 />
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-base">{o.title}</span>
+                  <span className={cn("text-base", !enabled && "text-muted")}>{o.title}</span>
                   <span className="text-sm text-muted">
                     {o.text}
                     {!enabled && " Non configuré sur ce serveur."}

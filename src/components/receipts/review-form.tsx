@@ -375,13 +375,9 @@ export function ReviewForm({
               <span className="flex items-center gap-3">
                 <Amount cents={linesSum} className={mismatch ? "text-warning" : "text-muted"} />
                 {items.fields.length > 0 && (
-                  <button
-                    type="button"
-                    className="text-xs text-muted underline underline-offset-4 hover:text-text"
-                    onClick={() => items.replace([])}
-                  >
+                  <Button type="button" size="sm" variant="ghost" onClick={() => items.replace([])}>
                     Retirer les lignes
-                  </button>
+                  </Button>
                 )}
               </span>
             </div>
@@ -445,7 +441,7 @@ export function ReviewForm({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           disabled={rejecting || isSubmitting}
           onClick={onReject}
         >

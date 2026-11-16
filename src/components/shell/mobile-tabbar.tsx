@@ -60,7 +60,7 @@ export function MobileTabbarView({ pathname }: { pathname: string | null }) {
       <div className="flex flex-1 items-center justify-center">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
-            aria-label="Ajouter"
+            aria-label="Ajouter un ticket ou une transaction"
             className="flex size-11 items-center justify-center rounded-md bg-accent text-bg active:bg-accent/80"
           >
             <Plus className="size-5" />

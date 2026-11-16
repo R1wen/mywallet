@@ -103,7 +103,7 @@ export function UploadPanel() {
   }
 
   return (
-    <Card>
+    <Card className="border-dashed border-border-strong">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -112,8 +112,8 @@ export function UploadPanel() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         className={cn(
-          "m-3 flex flex-col items-center gap-3 rounded-sm border border-dashed border-border-strong px-4 py-8 text-center transition-colors duration-[var(--duration-fast)]",
-          dragging && "border-accent bg-accent-subtle",
+          "flex flex-col items-center gap-3 rounded-md px-4 py-10 text-center transition-colors duration-[var(--duration-fast)]",
+          dragging && "bg-accent-subtle",
         )}
       >
         <p className="text-base text-text">Déposez vos tickets ici</p>

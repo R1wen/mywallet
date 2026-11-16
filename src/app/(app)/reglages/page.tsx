@@ -32,17 +32,23 @@ async function Settings() {
   ]);
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-      <AccountsManager
-        accounts={accounts.map((a) => ({
-          id: a.id,
-          name: a.name,
-          type: a.type,
-          institution: a.institution,
-          openingBalanceCents: a.openingBalanceCents,
-          balanceCents: a.balanceCents,
-          movementCount: a.movementCount,
-        }))}
-      />
+      <div className="flex flex-col gap-4">
+        <AccountsManager
+          accounts={accounts.map((a) => ({
+            id: a.id,
+            name: a.name,
+            type: a.type,
+            institution: a.institution,
+            openingBalanceCents: a.openingBalanceCents,
+            balanceCents: a.balanceCents,
+            movementCount: a.movementCount,
+          }))}
+        />
+        <ImportSettings
+          structurer={importSettings.structurer}
+          available={importSettings.available}
+        />
+      </div>
       <CategoriesManager
         categories={categories.map((c) => ({
           id: c.id,
@@ -52,7 +58,6 @@ async function Settings() {
           position: c.position,
         }))}
       />
-      <ImportSettings structurer={importSettings.structurer} available={importSettings.available} />
     </div>
   );
 }

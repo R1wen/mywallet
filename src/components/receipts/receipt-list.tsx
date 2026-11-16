@@ -16,7 +16,10 @@ export function ReceiptList({ rows }: { rows: ReceiptListRow[] }) {
           >
             <ReceiptThumb id={r.id} hasThumbnail={r.hasThumbnail} />
             <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-base text-text">
+              <span
+                className="truncate text-base text-text"
+                title={r.merchantName ?? r.filename ?? undefined}
+              >
                 {r.merchantName ?? r.filename ?? "Ticket"}
               </span>
               <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
