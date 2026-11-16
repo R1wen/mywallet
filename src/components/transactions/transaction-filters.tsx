@@ -77,7 +77,7 @@ export function TransactionFilters({
         onChange={(e) => update({ compte: e.target.value })}
         className="md:w-auto"
       >
-        <option value="">Tous les comptes</option>
+        <option value="">Comptes</option>
         {accounts.map((a) => (
           <option key={a.id} value={a.id}>
             {a.name}
@@ -90,7 +90,7 @@ export function TransactionFilters({
         onChange={(e) => update({ categorie: e.target.value })}
         className="md:w-auto md:max-w-56"
       >
-        <option value="">Toutes les catégories</option>
+        <option value="">Catégories</option>
         {roots.map((root) => {
           const children = categories.filter((c) => c.parentId === root.id);
           return children.length ? (
@@ -115,7 +115,7 @@ export function TransactionFilters({
         onChange={(e) => update({ type: e.target.value })}
         className="md:w-auto"
       >
-        <option value="">Tous les types</option>
+        <option value="">Types</option>
         {Object.entries(TX_KIND_LABELS).map(([k, label]) => (
           <option key={k} value={k}>
             {label}

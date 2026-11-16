@@ -32,7 +32,7 @@ pnpm lint | pnpm format:check
 pnpm test [chemin]       # tests unitaires (rapides) — ne pas utiliser `pnpm exec vitest` (plante avec Vitest 5 + projects)
 pnpm test:coverage       # seuil 80 % sur src/lib/domain
 pnpm test:int            # intégration, nécessite Postgres (docker compose up -d db)
-pnpm e2e                 # Playwright
+pnpm e2e                 # Playwright (en local, plus fiable sur un build : pnpm build puis E2E_START_COMMAND="pnpm start")
 pnpm db:generate | db:migrate | db:seed
 pnpm screens <sprint> <routes...>   # captures 1440/390 -> docs/screens/sprint-N
 ```
@@ -40,9 +40,10 @@ pnpm screens <sprint> <routes...>   # captures 1440/390 -> docs/screens/sprint-N
 ## Structure
 
 - `src/lib/domain/` — logique pure (argent, dates, marchands, créances, récurrences). **TDD, aucun import framework/DB.**
-- `src/lib/db/` — schéma Drizzle, client. `src/lib/server/` — accès données filtré par `userId`, actions.
+- `src/lib/db/` — schéma Drizzle, client. `src/lib/server/` — dépôts filtrés par `userId` (résultat `Result`).
+- `src/lib/actions/` — server actions (`requireUser` + Zod + `refresh()`). `src/lib/validation/` — schémas Zod partagés formulaire/serveur. `src/lib/catalog/` — catégories et enseignes FR par défaut.
 - `src/lib/auth/` — Better Auth (serveur + client) et `requireUser()`.
-- `src/components/ui/` — primitives. `src/components/shell/` — coquille (sidebar, topbar, ⌘K).
+- `src/components/ui/` — primitives. `src/components/shell/` — coquille (sidebar, topbar, ⌘K). `src/components/transactions/` — saisie rapide globale (`useTransactionDialog`).
 - `src/app/(app)/` — écrans connectés. `src/app/(auth)/` — connexion, inscription. `src/app/design/` — vitrine dev.
 - `tests/integration/`, `e2e/`, `scripts/`, `docs/`.
 
