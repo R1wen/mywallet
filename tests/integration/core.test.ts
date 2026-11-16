@@ -50,7 +50,6 @@ function input(patch: Partial<TransactionInput>): TransactionInput {
     kind: "expense",
     amountCents: 1000,
     occurredOn: "2026-11-10",
-    label: "Test",
     merchantName: "",
     accountId: checking,
     toAccountId: null,

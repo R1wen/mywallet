@@ -18,6 +18,7 @@ import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
 import { accounts, categories, merchants, transactions } from "@/lib/db/schema";
 import { findMerchantByLabel, normalizeMerchantName } from "@/lib/domain/merchant";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
+import { logoInfo, type MerchantLogoInfo } from "./merchants";
 import {
   PAGE_SIZE,
   type TransactionFilters,
@@ -54,6 +55,8 @@ export type TransactionListRow = {
   categoryName: string | null;
   merchantId: string | null;
   merchantName: string | null;
+  /** Logo of the merchant, for <MerchantLogo>. */
+  merchantLogo: MerchantLogoInfo | null;
   transferGroupId: string | null;
 };
 
@@ -131,6 +134,11 @@ export async function listTransactions(
       categoryName: categories.name,
       merchantId: transactions.merchantId,
       merchantName: merchants.name,
+      merchantNormalizedName: merchants.normalizedName,
+      merchantDomain: merchants.domain,
+      merchantLogoSource: merchants.logoSource,
+      merchantHasUpload: sql<boolean>`${merchants.logoData} is not null`,
+      merchantUpdatedAt: merchants.updatedAt,
       transferGroupId: transactions.transferGroupId,
     })
     .from(transactions)
@@ -151,7 +159,33 @@ export async function listTransactions(
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
-  return { rows: rows as TransactionListRow[], total, page, pageCount };
+  return {
+    rows: rows.map(
+      ({
+        merchantNormalizedName,
+        merchantDomain,
+        merchantLogoSource,
+        merchantHasUpload,
+        merchantUpdatedAt,
+        ...r
+      }): TransactionListRow => ({
+        ...r,
+        merchantLogo:
+          r.merchantId && merchantNormalizedName && merchantUpdatedAt
+            ? logoInfo({
+                normalizedName: merchantNormalizedName,
+                domain: merchantDomain,
+                logoSource: merchantLogoSource,
+                hasUpload: merchantHasUpload,
+                updatedAt: merchantUpdatedAt,
+              })
+            : null,
+      }),
+    ),
+    total,
+    page,
+    pageCount,
+  };
 }
 
 export type TransactionDetail = {

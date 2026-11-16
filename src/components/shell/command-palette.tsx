@@ -13,6 +13,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTransactionDialog } from "@/components/transactions/transaction-dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { isAvailable, NAV_ITEMS } from "./nav";
@@ -37,6 +38,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
   const router = useRouter();
   const signOut = useSignOut();
+  const transactions = useTransactionDialog();
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -85,6 +87,15 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                   heading="Actions"
                   className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
                 >
+                  <Command.Item
+                    className={itemClass}
+                    value="nouvelle transaction dépense entrée avoir virement"
+                    onSelect={() => run(transactions.openNew)}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Nouvelle transaction
+                    <Kbd className="ml-auto">N</Kbd>
+                  </Command.Item>
                   <Command.Item disabled className={itemClass} value="ajouter un ticket">
                     <Plus className="size-4" aria-hidden />
                     Ajouter un ticket

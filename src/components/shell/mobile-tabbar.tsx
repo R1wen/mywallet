@@ -3,19 +3,25 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { toast } from "@/components/ui/toast";
+import { useTransactionDialog } from "@/components/transactions/transaction-dialog";
 import { cn } from "@/lib/utils";
 import { isActive, isAvailable, NAV_ITEMS } from "./nav";
 
+/** Lit le chemin courant : à placer sous <Suspense> (routes à paramètre dynamique). */
 export function MobileTabbar() {
-  const pathname = usePathname();
+  return <MobileTabbarView pathname={usePathname()} />;
+}
+
+/** `pathname` null = repli sans onglet actif (fallback de Suspense). */
+export function MobileTabbarView({ pathname }: { pathname: string | null }) {
+  const { openNew } = useTransactionDialog();
   const tabs = NAV_ITEMS.filter((i) => i.mobile);
   const left = tabs.slice(0, 2);
   const right = tabs.slice(2, 4);
 
   const renderTab = (item: (typeof tabs)[number]) => {
     const available = isAvailable(item);
-    const active = isActive(pathname, item.href);
+    const active = pathname !== null && isActive(pathname, item.href);
     const cls = cn(
       "flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 text-xs",
       active ? "text-text" : "text-muted",
@@ -52,8 +58,9 @@ export function MobileTabbar() {
       <div className="flex flex-1 items-center justify-center">
         <button
           type="button"
-          aria-label="Ajouter un ticket"
-          onClick={() => toast("L'import de tickets arrive au sprint 3.")}
+          // Saisie manuelle en attendant l'import de tickets (sprint 3).
+          aria-label="Ajouter une transaction"
+          onClick={openNew}
           className="flex size-11 items-center justify-center rounded-md bg-accent text-bg active:bg-accent/80"
         >
           <Plus className="size-5" />
