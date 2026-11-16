@@ -20,7 +20,10 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "prepare": "husky",
-    "screens": "tsx scripts/screens.ts"
+    "screens": "tsx scripts/screens.ts",
+    "fixtures:receipts": "tsx scripts/fixtures/generate-receipts.ts",
+    "ocr:bench": "tsx scripts/ocr-benchmark.ts",
+    "ocr:bench:browser": "tsx scripts/ocr-browser-check.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.6",
@@ -62,9 +65,15 @@
     "husky": "^9.1.7",
     "jsdom": "^31.0.1",
     "lint-staged": "^17.6.1",
+    "onnxruntime-node": "1.31.1",
+    "onnxruntime-web": "1.31.1",
+    "pdfjs-dist": "6.5.438",
+    "ppu-paddle-ocr": "6.7.1",
     "prettier": "^3.10.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
+    "tesseract.js": "7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
