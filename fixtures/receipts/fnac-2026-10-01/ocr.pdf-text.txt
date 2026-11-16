@@ -1,0 +1,19 @@
+FNAC.COM
+Facture n° FAC-2026-000184
+Fnac Direct - 9 rue des Bateaux-Lavoirs
+94200 Ivry-sur-Seine
+SIRET 000 000 942 00010
+Date de facture : 08/10/2026
+Désignation Qté Prix unitaire TTC Total TTC
+Casque audio sans fil 1 129,99 129,99
+Roman poche - Le Grand Meaulnes 1 7,90 7,90
+Câble USB-C 1 m 2 14,99 29,98
+Frais de livraison 1 3,99 3,99
+Livraison offerte adhérent -3,99
+TVA 5,50% Base HT 7,49 TVA 0,41 TTC 7,90
+TVA 20,00% Base HT TVA 26,66 TTC 159,97
+133,31
+TOTAL TTC 167,87 EUR
+Payé par carte bancaire XXXX XXXX XXXX 4821
+Garantie 2 ans
+Merci pour votre commande.
