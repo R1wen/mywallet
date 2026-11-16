@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { and, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
 import { accounts, bankImportPresets, merchants, transactions } from "@/lib/db/schema";
 import {
@@ -57,7 +57,8 @@ export async function previewBankImport(
 
   const { rows } = parseCsv(input.csv);
   const detected = findHeaderRow(rows);
-  const headerRow = detected >= 0 ? detected : 0;
+  // Not recognised: the first row as wide as most rows (skips short preamble lines).
+  const headerRow = detected >= 0 ? detected : widestCommonRow(rows);
   const header = rows[headerRow] ?? [];
   let mapping = input.mapping;
   let fromPreset = false;
@@ -147,6 +148,16 @@ export async function previewBankImport(
   return ok({ ...empty, errors: extracted.errors, lines: preview, keys, truncated });
 }
 
+/** Index of the first row whose width is the most common width (2+ columns). */
+function widestCommonRow(rows: readonly (readonly string[])[]): number {
+  const sample = rows.slice(0, 50);
+  const counts = new Map<number, number>();
+  for (const r of sample) if (r.length > 1) counts.set(r.length, (counts.get(r.length) ?? 0) + 1);
+  const width = [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0];
+  const index = sample.findIndex((r) => r.length === width);
+  return index >= 0 ? index : 0;
+}
+
 export type ImportSummary = { created: number; linked: number; skipped: number };
 
 /** Strips bank prefixes ("CB ", "PRLV SEPA ", card dates) for a readable label. */
@@ -196,6 +207,7 @@ export async function commitBankImport(
 
     const summary: ImportSummary = { created: 0, linked: 0, skipped: 0 };
     const toCreate: (typeof transactions.$inferInsert)[] = [];
+    const toLink: { id: string; key: string; label: string }[] = [];
     for (const [i, line] of lines.entries()) {
       const key = keys[i]!;
       const fallback: ImportAction =
@@ -209,19 +221,7 @@ export async function commitBankImport(
         continue;
       }
       if (action === "link" && line.match) {
-        const rows = await tx
-          .update(transactions)
-          .set({ bankLineKey: key, bankLabel: line.label })
-          .where(
-            and(
-              eq(transactions.userId, userId),
-              eq(transactions.id, line.match.id),
-              isNull(transactions.bankLineKey),
-            ),
-          )
-          .returning({ id: transactions.id });
-        if (rows.length) summary.linked++;
-        else summary.skipped++;
+        toLink.push({ id: line.match.id, key, label: line.label });
         continue;
       }
       const label = readableLabel(line.label);
@@ -239,6 +239,21 @@ export async function commitBankImport(
         bankLineKey: key,
         bankLabel: line.label,
       });
+    }
+    // Links in batches of 500: one UPDATE ... FROM (VALUES ...) instead of one per line.
+    for (let i = 0; i < toLink.length; i += 500) {
+      const chunk = toLink.slice(i, i + 500);
+      const values = sql.join(
+        chunk.map((l) => sql`(${l.id}::uuid, ${l.key}, ${l.label})`),
+        sql`, `,
+      );
+      const linked = await tx.execute<{ id: string }>(sql`
+        update transactions t set bank_line_key = v.k, bank_label = v.l
+        from (values ${values}) as v(id, k, l)
+        where t.user_id = ${userId} and t.id = v.id and t.bank_line_key is null
+        returning t.id`);
+      summary.linked += linked.rows.length;
+      summary.skipped += chunk.length - linked.rows.length;
     }
     for (let i = 0; i < toCreate.length; i += 500) {
       const inserted = await tx

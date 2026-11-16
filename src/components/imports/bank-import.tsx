@@ -46,6 +46,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
 export function BankImport({ accounts }: { accounts: { id: string; name: string }[] }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const latest = useRef(0);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
   const [preview, setPreview] = useState<BankPreview | null>(null);
@@ -55,9 +56,12 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
   const [busy, setBusy] = useState(false);
 
   async function load(csv: string, account: string, map: ColumnMapping | null) {
+    // Only the latest request may update the preview (a slow older one is ignored).
+    const ticket = ++latest.current;
     setBusy(true);
     setError(null);
     const r = await previewBankImportAction({ accountId: account, csv, mapping: map });
+    if (ticket !== latest.current) return;
     setBusy(false);
     if (!r.ok) {
       setError(r.error);
@@ -80,8 +84,16 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
   }
 
   function changeColumn(key: ColumnKey, value: string) {
-    if (!mapping || !file) return;
-    const next = { ...mapping, [key]: value === "" ? null : Number(value) };
+    if (!file) return;
+    // Unrecognised columns: start from an empty mapping the user fills in.
+    const base: ColumnMapping = mapping ?? {
+      date: 0,
+      label: 0,
+      amount: null,
+      debit: null,
+      credit: null,
+    };
+    const next = { ...base, [key]: value === "" ? null : Number(value) };
     if (key === "amount" && value !== "") Object.assign(next, { debit: null, credit: null });
     if ((key === "debit" || key === "credit") && value !== "") next.amount = null;
     setMapping(next);

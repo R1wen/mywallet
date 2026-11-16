@@ -141,6 +141,20 @@ describe("extractBankLines", () => {
   });
 });
 
+describe("extractBankLines with zero debit or credit", () => {
+  it("skips zero lines in either column instead of reporting them unreadable", () => {
+    const rows = [
+      ["Date", "Libellé", "Débit", "Crédit"],
+      ["01/11/2026", "INFO", "0,00", ""],
+      ["01/11/2026", "INFO", "", "0,00"],
+      ["02/11/2026", "CB", "0,00", "5,00"],
+    ];
+    const r = extractBankLines(rows, 0, { date: 0, label: 1, amount: null, debit: 2, credit: 3 });
+    expect(r.errors).toEqual([]);
+    expect(r.lines.map((l) => l.amountCents)).toEqual([500]);
+  });
+});
+
 describe("bankLineKeys", () => {
   it("numbers identical lines so two same-day coffees are both kept", () => {
     const line = { row: 2, date: "2026-11-01", label: "CB CAFE  DU COIN", amountCents: -250 };

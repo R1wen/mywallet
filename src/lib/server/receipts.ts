@@ -105,7 +105,10 @@ export async function createReceipt(
     })
     .from(receiptFiles)
     .where(eq(receiptFiles.userId, userId));
-  if ((usage?.bytes ?? 0) + input.data.byteLength > MAX_STORAGE_BYTES) {
+  if (
+    (usage?.bytes ?? 0) + input.data.byteLength + (thumbnail?.byteLength ?? 0) >
+    MAX_STORAGE_BYTES
+  ) {
     return fail("Espace de stockage des tickets plein (200 Mo) : supprimez d'anciens tickets.");
   }
   const [recent] = await db
@@ -433,8 +436,15 @@ export async function saveExtraction(
     }
   }
 
+  // Status re-checked in the write itself: a receipt validated meanwhile (the model
+  // call can take seconds) must never be put back to review.
+  const stillOpen = and(
+    eq(receipts.userId, userId),
+    eq(receipts.id, input.receiptId),
+    inArray(receipts.status, OPEN_STATUSES),
+  );
   if (!parsed || !validation) {
-    await db
+    const manual = await db
       .update(receipts)
       .set({
         status: "manual",
@@ -444,8 +454,9 @@ export async function saveExtraction(
         extracted: null,
         confidence: null,
       })
-      .where(and(eq(receipts.userId, userId), eq(receipts.id, input.receiptId)));
-    return ok({ status: "manual" });
+      .where(stillOpen)
+      .returning({ id: receipts.id });
+    return manual.length ? ok({ status: "manual" }) : fail("Ce ticket est déjà traité.");
   }
 
   const known = await db
@@ -488,7 +499,7 @@ export async function saveExtraction(
     issues: validation.issues,
     duplicateOfId,
   };
-  await db
+  const saved = await db
     .update(receipts)
     .set({
       status: "to_review",
@@ -500,8 +511,9 @@ export async function saveExtraction(
       confidence: validation.confidence,
       duplicateKey: key,
     })
-    .where(and(eq(receipts.userId, userId), eq(receipts.id, input.receiptId)));
-  return ok({ status: "to_review" });
+    .where(stillOpen)
+    .returning({ id: receipts.id });
+  return saved.length ? ok({ status: "to_review" }) : fail("Ce ticket est déjà traité.");
 }
 
 /* -------------------------------------------------------------------------- */

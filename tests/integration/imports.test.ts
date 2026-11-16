@@ -244,6 +244,27 @@ describe("extraction and review", () => {
     expect(await getReceipt(A, id)).toMatchObject({ status: "to_review", transactionId: null });
   });
 
+  it("puts a receipt entered by hand back to manual entry, and a stale OCR result is refused", async () => {
+    const blank = (await upload(A, 23)).id;
+    await saveExtraction(
+      A,
+      { receiptId: blank, ocrText: "", ocrEngine: null, failure: "empty" },
+      TODAY,
+    );
+    const r = await confirmReceipt(A, blank, review({ items: [], returnDeadline: "" }));
+    if (!r.ok) throw new Error(r.error);
+    // OCR finishing after the validation must not reopen the receipt.
+    expect(
+      await saveExtraction(
+        A,
+        { receiptId: blank, ocrText: TICKET, ocrEngine: "tesseract", failure: null },
+        TODAY,
+      ),
+    ).toEqual({ ok: false, error: "Ce ticket est déjà traité." });
+    expect((await deleteTransaction(A, r.data.transactionId)).ok).toBe(true);
+    expect((await getReceipt(A, blank))?.status).toBe("manual");
+  });
+
   it("rejects, reopens and deletes with its files", async () => {
     expect((await rejectReceipt(A, id)).ok).toBe(true);
     expect((await getReceipt(A, id))?.status).toBe("rejected");

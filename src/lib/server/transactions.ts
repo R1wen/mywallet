@@ -503,7 +503,12 @@ export async function deleteTransaction(
       // Un ticket validé par ce mouvement repasse « à vérifier » (son fichier est conservé).
       await tx
         .update(receipts)
-        .set({ status: "to_review", transactionId: null, validatedAt: null })
+        .set({
+          // Back to review, or to manual entry when nothing was read.
+          status: sql`case when ${receipts.extracted} is null then 'manual' else 'to_review' end`,
+          transactionId: null,
+          validatedAt: null,
+        })
         .where(
           and(
             eq(receipts.userId, userId),

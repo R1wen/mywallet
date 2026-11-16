@@ -24,7 +24,12 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/receipts/[id]/[
       "content-disposition": `inline; filename="ticket.${UPLOAD_EXTENSIONS[file.mimeType]}"`,
       // Files never change for a given receipt id.
       "cache-control": "private, max-age=86400, immutable",
-      "content-security-policy": "default-src 'none'; img-src 'self'; sandbox",
+      // Browsers' PDF viewers refuse to render under a sandbox CSP: PDFs get the strict
+      // policy without it (no script source is allowed either way).
+      "content-security-policy":
+        file.mimeType === "application/pdf"
+          ? "default-src 'none'; img-src 'self'; frame-ancestors 'none'"
+          : "default-src 'none'; img-src 'self'; sandbox",
       "x-content-type-options": "nosniff",
       "cross-origin-resource-policy": "same-origin",
     },

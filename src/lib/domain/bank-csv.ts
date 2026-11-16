@@ -194,7 +194,9 @@ export function extractBankLines(
     } else {
       const debit = parseBankAmount(r[mapping.debit ?? -1] ?? "");
       const credit = parseBankAmount(r[mapping.credit ?? -1] ?? "");
-      amountCents = debit ? -Math.abs(debit) : credit !== null ? Math.abs(credit) : null;
+      if (debit) amountCents = -Math.abs(debit);
+      else if (credit !== null) amountCents = Math.abs(credit);
+      else amountCents = debit; // 0 (skipped below) or null (unreadable)
     }
     if (amountCents === null) {
       errors.push({ row, message: "Montant illisible." });
