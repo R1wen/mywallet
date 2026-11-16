@@ -49,6 +49,7 @@ const GENERATION_HORIZON_MONTHS = 12;
 const toAccounts = alias(accounts, "to_account");
 
 const merchantLogoFields = {
+  merchantId: merchants.id,
   merchantName: merchants.name,
   merchantNormalizedName: merchants.normalizedName,
   merchantDomain: merchants.domain,
@@ -58,6 +59,7 @@ const merchantLogoFields = {
 };
 
 type MerchantLogoRow = {
+  merchantId: string | null;
   merchantName: string | null;
   merchantNormalizedName: string | null;
   merchantDomain: string | null;
@@ -105,6 +107,7 @@ export type RecurringRuleRow = {
   toAccountId: string | null;
   toAccountName: string | null;
   categoryName: string | null;
+  merchantId: string | null;
   merchantName: string | null;
   merchantLogo: MerchantLogoInfo | null;
   schedule: string;
@@ -161,6 +164,7 @@ export async function listRules(userId: string, db: Db = defaultDb): Promise<Rec
       toAccountId: rule.toAccountId,
       toAccountName: r.toAccountName,
       categoryName: r.categoryName,
+      merchantId: r.merchantId,
       merchantName: r.merchantName,
       merchantLogo: merchantLogo(r),
       schedule: describeRecurrence(specOf(rule)),
@@ -416,6 +420,7 @@ export type OccurrenceRow = {
   accountName: string;
   toAccountId: string | null;
   toAccountName: string | null;
+  merchantId: string | null;
   merchantName: string | null;
   merchantLogo: MerchantLogoInfo | null;
 };
@@ -491,6 +496,7 @@ export async function listOccurrences(
     accountName: r.accountName,
     toAccountId: r.toAccountId,
     toAccountName: r.toAccountName,
+    merchantId: r.merchantId,
     merchantName: r.merchantName,
     merchantLogo: merchantLogo(r),
   }));

@@ -1,6 +1,8 @@
 import { ArrowLeftRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { OccurrenceDialogProvider } from "@/components/recurring/occurrence-dialog";
+import { UpcomingCard } from "@/components/recurring/upcoming-card";
 import { PageHeader } from "@/components/shell/app-shell";
 import { NewTransactionButton } from "@/components/transactions/transaction-dialog";
 import { TransactionRows } from "@/components/transactions/transaction-rows";
@@ -19,6 +21,7 @@ import {
   type MonthKey,
 } from "@/lib/domain/dates";
 import { getMonthDashboard } from "@/lib/server/dashboard";
+import { generateOccurrences, getResteAVivre } from "@/lib/server/recurring";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage({ searchParams }: PageProps<"/">) {
@@ -41,7 +44,13 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
   const raw = Array.isArray(params.mois) ? params.mois[0] : params.mois;
   const now = currentMonth();
   const month = parseMonthKey(raw) ?? now;
-  const d = await getMonthDashboard(user.id, month);
+  const today = toParisDateString(new Date());
+  // Échéances du mois en cours générées avant le calcul du reste à vivre (idempotent).
+  await generateOccurrences(user.id, monthBounds(now.year, now.month).to);
+  const [d, rav] = await Promise.all([
+    getMonthDashboard(user.id, month),
+    getResteAVivre(user.id, today),
+  ]);
   const prev = shiftMonth(month.year, month.month, -1);
   const next = shiftMonth(month.year, month.month, 1);
   const isCurrent = month.year === now.year && month.month === now.month;
@@ -50,7 +59,10 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
   const topMax = Math.max(1, ...d.topCategories.map((c) => c.spentCents));
 
   return (
-    <>
+    <OccurrenceDialogProvider
+      accounts={d.accounts.map((a) => ({ id: a.id, name: a.name }))}
+      today={today}
+    >
       <PageHeader title="Tableau de bord" actions={<NewTransactionButton />} />
 
       <nav aria-label="Mois affiché" className="mb-4 flex items-center gap-1">
@@ -92,6 +104,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
+          {isCurrent && <UpcomingCard rav={rav} today={today} />}
           <Card>
             <CardHeader>
               <CardTitle>Dépenses par catégorie</CardTitle>
@@ -169,7 +182,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
           )}
         </Card>
       </div>
-    </>
+    </OccurrenceDialogProvider>
   );
 }
 
