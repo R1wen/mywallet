@@ -33,7 +33,9 @@ export type ServerEnv = z.infer<typeof serverSchema>;
 
 /** Valide un environnement donné (exporté pour les tests). */
 export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
-  const parsed = serverSchema.safeParse(source);
+  // Une variable vide vaut une variable absente (`vercel pull` écrit par ex. VERCEL_URL="").
+  const defined = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== ""));
+  const parsed = serverSchema.safeParse(defined);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`);
     throw new Error(

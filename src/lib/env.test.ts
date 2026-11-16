@@ -32,6 +32,14 @@ describe("parseServerEnv", () => {
     ).toBe("https://x.fr");
   });
 
+  it('treats empty variables as unset (vercel pull writes VERCEL_URL="")', () => {
+    expect(
+      parseServerEnv({ ...base, VERCEL_URL: "", BETTER_AUTH_URL: "", VERCEL_ENV: "" })
+        .BETTER_AUTH_URL,
+    ).toBe("http://localhost:3000");
+    expect(() => parseServerEnv({ ...base, DATABASE_URL: "" })).toThrow(/DATABASE_URL/);
+  });
+
   it("rejects a short secret and lists the faulty variables", () => {
     expect(() => parseServerEnv({ ...base, BETTER_AUTH_SECRET: "court" })).toThrow(
       /BETTER_AUTH_SECRET/,
