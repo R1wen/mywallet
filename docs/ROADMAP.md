@@ -27,7 +27,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Docker (image testée), `/api/health`
 - [x] CI, CD (Vercel + Neon), Dependabot, CodeQL, gitleaks
 - [x] Captures, `ui-reviewer` (corrections appliquées), `security-reviewer` (faille CD corrigée)
-- [~] `/code-review`, PR, CI verte sur GitHub
+- [x] `/code-review` (9 corrections appliquées)
+- [ ] Dépôt GitHub, push, PR, `/security-review`, CI verte (en attente de `gh auth login`)
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
