@@ -38,9 +38,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Schéma : migration 0001 (avoir, logo importé, cache de favicons), catalogue FR partagé, provisionnement à l'inscription
 - [x] Serveur : transactions (filtres, recherche, tri, pagination, virements), catégories, comptes, magasins (stats, fusion, logo), tableau de bord ; isolation A/B testée
 - [x] UI : saisie rapide (palette, touche N, bouton mobile), Transactions, Magasins et fiche, Réglages, tableau de bord du mois
-- [x] Tests : 216 unitaires (domaine 97 %), 41 intégration, 14 e2e (dépense en moins de 10 s)
-- [~] Captures, `ui-reviewer`, `/code-review`
-- [ ] PR, CI verte
+- [x] Tests : 217 unitaires (domaine 97 %), 44 intégration, 14 e2e (dépense en moins de 10 s)
+- [x] Captures (`docs/screens/sprint-1/`), `ui-reviewer` (2 itérations, tous les écrans validés), `/code-review` (10 corrections appliquées)
+- [~] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP (puis déploiement Neon + Vercel par l'utilisateur)
 
 ### Reporté (décidé au Sprint 0)
