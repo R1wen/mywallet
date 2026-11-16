@@ -13,6 +13,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Browser OCR / PDF assets served from the app origin (install ran with --ignore-scripts).
+RUN node scripts/copy-ocr-assets.mjs
 ENV NEXT_OUTPUT=standalone
 # Valeurs factices uniquement pour le build (aucune connexion à la base pendant le build).
 RUN DATABASE_URL=postgres://build:build@localhost:5432/build \
@@ -28,6 +30,7 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
+COPY --from=build --chown=app:app /app/public ./public
 COPY --from=build --chown=app:app /app/drizzle ./drizzle
 COPY --from=build --chown=app:app /app/dist/migrate.mjs ./migrate.mjs
 COPY --chown=app:app docker/entrypoint.sh ./entrypoint.sh
