@@ -4,6 +4,9 @@ import {
   formatDateFr,
   formatMonthFr,
   isLeapYear,
+  monthBounds,
+  parseMonthKey,
+  shiftMonth,
   PARIS_TZ,
   toParisDateString,
 } from "./dates";
@@ -64,4 +67,35 @@ describe("formatMonthFr", () => {
 
 it("exposes the Paris time zone", () => {
   expect(PARIS_TZ).toBe("Europe/Paris");
+});
+
+describe("month keys", () => {
+  it.each([
+    ["2026-11", { year: 2026, month: 11 }],
+    ["2024-02", { year: 2024, month: 2 }],
+    ["2026-13", null],
+    ["2026-1", null],
+    ["abc", null],
+    ["", null],
+    [undefined, null],
+  ])("parseMonthKey(%j)", (input, expected) => {
+    expect(parseMonthKey(input)).toEqual(expected);
+  });
+
+  it.each([
+    [2026, 11, { from: "2026-11-01", to: "2026-11-30" }],
+    [2024, 2, { from: "2024-02-01", to: "2024-02-29" }],
+    [2025, 12, { from: "2025-12-01", to: "2025-12-31" }],
+  ])("monthBounds(%d, %d)", (y, m, expected) => {
+    expect(monthBounds(y, m)).toEqual(expected);
+  });
+
+  it.each([
+    [2026, 11, 1, { year: 2026, month: 12 }],
+    [2026, 12, 1, { year: 2027, month: 1 }],
+    [2026, 1, -1, { year: 2025, month: 12 }],
+    [2026, 3, -14, { year: 2025, month: 1 }],
+  ])("shiftMonth(%d, %d, %d)", (y, m, delta, expected) => {
+    expect(shiftMonth(y, m, delta)).toEqual(expected);
+  });
 });

@@ -99,3 +99,24 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-019 — `jobs.user_id` facultatif
 
 - Décision : nullable pour permettre des tâches système ; cascade depuis `user` quand renseigné.
+
+## ADR-020 — Avoir marchand : type `refund`
+
+- Contexte : point ouvert de l'ADR-017 (remboursement d'un achat par un marchand). Validé par l'utilisateur au Sprint 1.
+- Décision : nouveau type de transaction `refund`, montant > 0. Il recrédite le solde, n'est pas un revenu et vient en déduction de la dépense de sa catégorie et de son marchand. Pas de lien obligatoire vers l'achat d'origine.
+
+## ADR-021 — Suppression d'une catégorie : remplacement obligatoire
+
+- Décision (validée) : supprimer une catégorie utilisée exige une catégorie de remplacement de même nature. Transactions, lignes de ticket, marchands, règles récurrentes et règles de catégorisation sont réaffectés dans la même transaction SQL. Les budgets de la catégorie supprimée sont supprimés (ils n'ont pas de sens sur une autre catégorie). Une catégorie qui a des sous-catégories ne peut pas être supprimée tant qu'elles existent.
+- Profondeur maximale : 2 niveaux (catégorie, sous-catégorie) ; une sous-catégorie a la même nature que son parent.
+
+## ADR-022 — Logos des marchands sans compte tiers
+
+- Décision (validée) : chaîne de résolution (1) logo importé par l'utilisateur, (2) icône de marque `simple-icons` (CC0) embarquée pour le catalogue d'enseignes, rendue en SVG monochrome, (3) favicon du domaine via Google S2 puis DuckDuckGo Icons, (4) monogramme. Logo.dev reste une option future (clé gratuite + attribution).
+- Sécurité : le serveur ne contacte que ces deux hôtes fixes (le domaine n'est qu'un paramètre), domaine validé, réponse limitée en taille et en type (PNG, ICO, JPEG, GIF, WebP ; jamais de SVG distant), délai court. La route `/api/merchants/[id]/logo` exige une session et un marchand de l'utilisateur : impossible de s'en servir comme proxy.
+- Cache durable en base (`logo_cache`, clé = domaine, sans donnée utilisateur, partagé entre utilisateurs) : un favicon trouvé est gardé 30 jours, une absence 7 jours. Rien n'est stocké sur disque (incompatible avec Vercel).
+- Logo importé : stocké en `bytea` sur le marchand (256 Kio max, PNG/JPEG/WebP vérifiés par signature), servi avec `Content-Security-Policy: default-src 'none'`.
+
+## ADR-023 — Provisionnement à l'inscription
+
+- Décision : à la création d'un utilisateur (hook Better Auth `databaseHooks.user.create.after`), insertion des catégories par défaut, du catalogue d'enseignes françaises et d'un compte courant. Catalogue partagé avec le seed dans `src/lib/catalog/`.

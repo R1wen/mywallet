@@ -65,6 +65,32 @@ const monthFormatter = new Intl.DateTimeFormat("fr-FR", {
   year: "numeric",
 });
 
+export type MonthKey = { year: number; month: number };
+
+/** Parses "YYYY-MM" (URL parameter `mois`); anything else is null. */
+export function parseMonthKey(value: string | undefined | null): MonthKey | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(value ?? "");
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  return month >= 1 && month <= 12 ? { year, month } : null;
+}
+
+export function formatMonthKey({ year, month }: MonthKey): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+/** First and last calendar day of a month, as "YYYY-MM-DD". */
+export function monthBounds(year: number, month: number): { from: string; to: string } {
+  const key = formatMonthKey({ year, month });
+  return { from: `${key}-01`, to: `${key}-${String(daysInMonth(year, month)).padStart(2, "0")}` };
+}
+
+export function shiftMonth(year: number, month: number, delta: number): MonthKey {
+  const index = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(index / 12), month: (((index % 12) + 12) % 12) + 1 };
+}
+
 export function formatMonthFr(year: number, month: number): string {
   daysInMonth(year, month);
   return monthFormatter.format(new Date(Date.UTC(year, month - 1, 15, 12)));
