@@ -11,16 +11,21 @@ import {
   transactions,
   type OccurrenceStatus,
 } from "@/lib/db/schema";
-import { monthBounds } from "@/lib/domain/dates";
+import { monthBounds, parseMonthKey, shiftMonth } from "@/lib/domain/dates";
 import {
   describeRecurrence,
+  addDaysIso,
+  GENERATION_HORIZON_MONTHS,
+  occurrencesBetween,
+  periodKey,
+  startOfNextPeriod,
   initialNextRunOn,
   planGeneration,
   type RecurrenceSpec,
 } from "@/lib/domain/recurrence";
 import { computeResteAVivre, type ResteAVivre } from "@/lib/domain/reste-a-vivre";
 import type { OccurrenceConfirmInput, RecurringRuleInput } from "@/lib/validation/recurring";
-import { listAccountsWithBalance } from "./accounts";
+import { listAccountsWithBalance, type AccountWithBalance } from "./accounts";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
 import {
   fail,
@@ -42,9 +47,6 @@ export type RecurringKind = "expense" | "income" | "transfer";
 
 /** Account types counted in the "reste à vivre" (ADR-025). */
 export const SPENDABLE_ACCOUNT_TYPES = ["checking", "cash"] as const;
-
-/** Occurrences are generated (stored) at most this far ahead. */
-const GENERATION_HORIZON_MONTHS = 12;
 
 const toAccounts = alias(accounts, "to_account");
 
@@ -284,7 +286,9 @@ export async function createRule(
 
 /**
  * Updates a rule. Future planned occurrences (from today) are regenerated with the new
- * amount and schedule; validated, skipped and overdue ones are kept.
+ * amount and schedule; overdue planned ones take the new amount; validated and skipped ones
+ * are kept, and the new schedule starts after the last period they cover (no second
+ * occurrence in a month already handled).
  */
 export async function updateRule(
   userId: string,
@@ -317,9 +321,56 @@ export async function updateRule(
             gte(recurringOccurrences.dueOn, today),
           ),
         );
+      // Échéances en retard encore prévues : nouveau montant (et nouveau signe si le type a changé).
+      await tx
+        .update(recurringOccurrences)
+        .set({ amountCents: values.amountCents })
+        .where(
+          and(
+            eq(recurringOccurrences.userId, userId),
+            eq(recurringOccurrences.ruleId, id),
+            eq(recurringOccurrences.status, "planned"),
+          ),
+        );
+      // Périodes à venir déjà traitées (validées en avance ou ignorées) : pas de seconde
+      // échéance dans ces périodes avec le nouveau calendrier.
+      const handled = await tx
+        .select({ dueOn: recurringOccurrences.dueOn })
+        .from(recurringOccurrences)
+        .where(
+          and(
+            eq(recurringOccurrences.userId, userId),
+            eq(recurringOccurrences.ruleId, id),
+            inArray(recurringOccurrences.status, ["confirmed", "skipped"]),
+            gte(recurringOccurrences.dueOn, today),
+          ),
+        );
+      const spec = specOf(values);
+      let from = today;
+      if (handled.length) {
+        const last = handled.reduce((m, h) => (h.dueOn > m ? h.dueOn : m), handled[0]!.dueOn);
+        from = startOfNextPeriod(values.frequency, last);
+        const done = new Set(handled.map((h) => periodKey(values.frequency, h.dueOn)));
+        const dates = occurrencesBetween(spec, today, addDaysIso(from, -1)).filter(
+          (d) => !done.has(periodKey(values.frequency, d)),
+        );
+        if (dates.length) {
+          await tx
+            .insert(recurringOccurrences)
+            .values(
+              dates.map((dueOn) => ({
+                userId,
+                ruleId: id,
+                dueOn,
+                amountCents: values.amountCents,
+              })),
+            )
+            .onConflictDoNothing();
+        }
+      }
       await tx
         .update(recurringRules)
-        .set({ ...values, nextRunOn: initialNextRunOn(specOf(values), today) })
+        .set({ ...values, nextRunOn: initialNextRunOn(spec, from) })
         .where(and(eq(recurringRules.userId, userId), eq(recurringRules.id, id)));
       return ok({ id });
     });
@@ -354,9 +405,9 @@ export async function deleteRule(userId: string, id: string, db: Db = defaultDb)
 
 /** Last day of the generation window for a month view (capped GENERATION_HORIZON_MONTHS ahead). */
 export function generationLimit(viewedMonthEnd: string, today: string): string {
-  const [y, m] = today.split("-").map(Number) as [number, number];
-  const idx = y * 12 + (m - 1) + GENERATION_HORIZON_MONTHS;
-  const cap = monthBounds(Math.floor(idx / 12), (idx % 12) + 1).to;
+  const now = parseMonthKey(today.slice(0, 7))!;
+  const last = shiftMonth(now.year, now.month, GENERATION_HORIZON_MONTHS);
+  const cap = monthBounds(last.year, last.month).to;
   return viewedMonthEnd < cap ? viewedMonthEnd : cap;
 }
 
@@ -574,7 +625,10 @@ export async function confirmOccurrence(
       return ok({ transactionId: written.data.id });
     });
   } catch (e) {
-    return mapRuleError(e);
+    // Erreur sur le mouvement créé, pas sur la règle.
+    if (isForeignKeyViolation(e)) return fail("Compte, catégorie ou magasin introuvable.");
+    if (isCheckViolation(e)) return fail("Mouvement invalide.");
+    throw e;
   }
 }
 
@@ -639,12 +693,16 @@ export async function getResteAVivre(
   userId: string,
   today: string,
   db: Db = defaultDb,
+  /** Data the page already loaded (avoids querying it twice). */
+  preloaded: { accounts?: AccountWithBalance[]; monthOccurrences?: OccurrenceRow[] } = {},
 ): Promise<ResteAVivreSummary> {
-  const [y, m] = today.split("-").map(Number) as [number, number];
-  const { from, to } = monthBounds(y, m);
+  const month = parseMonthKey(today.slice(0, 7))!;
+  const { from, to } = monthBounds(month.year, month.month);
   const [accountRows, pending] = await Promise.all([
-    listAccountsWithBalance(userId, db),
-    listOccurrences(userId, { from, to, status: "planned" }, db),
+    preloaded.accounts ?? listAccountsWithBalance(userId, db),
+    preloaded.monthOccurrences
+      ? preloaded.monthOccurrences.filter((o) => o.status === "planned")
+      : listOccurrences(userId, { from, to, status: "planned" }, db),
   ]);
   const spendable = accountRows.filter((a) =>
     (SPENDABLE_ACCOUNT_TYPES as readonly string[]).includes(a.type),

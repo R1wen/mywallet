@@ -354,24 +354,29 @@ export async function writeTransaction(
       categoryId: input.categoryId,
     };
     if (existing?.transferGroupId) {
-      // Mise à jour en place des deux jambes : leurs ids restent stables (une échéance
-      // récurrente validée pointe sur la jambe débitrice).
-      const groupId = existing.transferGroupId;
-      const inGroup = and(
-        eq(transactions.userId, userId),
-        eq(transactions.transferGroupId, groupId),
-      );
-      const updated = await tx
+      // Mise à jour en place des deux jambes, quelle que soit la jambe ouverte : la jambe
+      // débitrice reste débitrice (une échéance récurrente validée pointe sur elle).
+      const legs = await tx
+        .select({ id: transactions.id, amountCents: transactions.amountCents })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.transferGroupId, existing.transferGroupId),
+          ),
+        );
+      const debit = legs.find((l) => l.amountCents < 0);
+      const credit = legs.find((l) => l.amountCents > 0);
+      if (!debit || !credit) return fail(NOT_FOUND);
+      await tx
         .update(transactions)
         .set(out)
-        .where(and(inGroup, eq(transactions.id, existing.id)))
-        .returning({ id: transactions.id });
-      if (!updated[0]) return fail(NOT_FOUND);
+        .where(and(eq(transactions.userId, userId), eq(transactions.id, debit.id)));
       await tx
         .update(transactions)
         .set(into)
-        .where(and(inGroup, sql`${transactions.id} <> ${existing.id}`));
-      return ok(updated[0]);
+        .where(and(eq(transactions.userId, userId), eq(transactions.id, credit.id)));
+      return ok({ id: debit.id });
     }
     const groupId = randomUUID();
     const legs = await tx
@@ -380,8 +385,9 @@ export async function writeTransaction(
         { ...out, transferGroupId: groupId, recurringRuleId },
         { ...into, transferGroupId: groupId, recurringRuleId },
       ])
-      .returning({ id: transactions.id });
-    return ok({ id: legs[0]!.id });
+      .returning({ id: transactions.id, amountCents: transactions.amountCents });
+    // RETURNING ne garantit pas l'ordre des VALUES : la jambe débitrice est celle < 0.
+    return ok({ id: legs.find((l) => l.amountCents < 0)!.id });
   }
 
   const merchant = await resolveMerchant(userId, input.merchantName, tx);

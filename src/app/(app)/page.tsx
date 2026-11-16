@@ -45,12 +45,13 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
   const now = currentMonth();
   const month = parseMonthKey(raw) ?? now;
   const today = toParisDateString(new Date());
-  // Échéances du mois en cours générées avant le calcul du reste à vivre (idempotent).
-  await generateOccurrences(user.id, monthBounds(now.year, now.month).to);
-  const [d, rav] = await Promise.all([
-    getMonthDashboard(user.id, month),
-    getResteAVivre(user.id, today),
-  ]);
+  const isCurrentMonth = month.year === now.year && month.month === now.month;
+  // Reste à vivre : seulement sur le mois en cours, avec les soldes déjà calculés.
+  if (isCurrentMonth) await generateOccurrences(user.id, monthBounds(now.year, now.month).to);
+  const d = await getMonthDashboard(user.id, month);
+  const rav = isCurrentMonth
+    ? await getResteAVivre(user.id, today, undefined, { accounts: d.accounts })
+    : null;
   const prev = shiftMonth(month.year, month.month, -1);
   const next = shiftMonth(month.year, month.month, 1);
   const isCurrent = month.year === now.year && month.month === now.month;
@@ -104,7 +105,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
-          {isCurrent && <UpcomingCard rav={rav} today={today} />}
+          {rav && <UpcomingCard rav={rav} today={today} />}
           <Card>
             <CardHeader>
               <CardTitle>Dépenses par catégorie</CardTitle>

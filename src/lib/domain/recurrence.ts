@@ -6,6 +6,9 @@
 import { daysInMonth } from "./dates";
 
 export const RECURRENCE_FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
+
+/** Occurrences are generated (stored) at most this many months ahead (ADR-024). */
+export const GENERATION_HORIZON_MONTHS = 12;
 export type Frequency = (typeof RECURRENCE_FREQUENCIES)[number];
 
 export type RecurrenceSpec = {
@@ -99,6 +102,24 @@ export function firstOccurrenceOnOrAfter(spec: RecurrenceSpec, day: string): str
         ? 31 * (interval + 1)
         : 366 * (interval + 1);
   return occurrencesBetween(spec, from, addDaysIso(from, horizon))[0] ?? null;
+}
+
+/**
+ * First day after the period (week, month, year) containing `day`. Used when a rule is
+ * rescheduled: periods already handled (validated or skipped) must not get a new occurrence.
+ */
+export function startOfNextPeriod(frequency: Frequency, day: string): string {
+  const [y, m] = parts(day);
+  if (frequency === "weekly") return addDaysIso(day, 1);
+  if (frequency === "monthly") return m === 12 ? iso(y + 1, 1, 1) : iso(y, m + 1, 1);
+  return iso(y + 1, 1, 1);
+}
+
+/** Period an occurrence belongs to: its month, its year, or the day itself for weekly rules. */
+export function periodKey(frequency: Frequency, day: string): string {
+  if (frequency === "monthly") return day.slice(0, 7);
+  if (frequency === "yearly") return day.slice(0, 4);
+  return day;
 }
 
 /** Cursor value meaning "nothing left to generate" for a rule that has ended. */

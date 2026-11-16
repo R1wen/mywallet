@@ -158,7 +158,12 @@ describe("recurringRuleInputSchema", () => {
     expect(recurringRuleInputSchema.parse({ ...rule, kind: "income" }).amountCents).toBe(89_000);
     expect(recurringRuleInputSchema.parse({ ...rule, frequency: "weekly" }).dayOfMonth).toBeNull();
     expect(
-      recurringRuleInputSchema.parse({ ...rule, kind: "transfer", toAccountId: B }),
+      recurringRuleInputSchema.parse({
+        ...rule,
+        kind: "transfer",
+        label: "Épargne",
+        toAccountId: B,
+      }),
     ).toMatchObject({ amountCents: -89_000, toAccountId: B, merchantName: "" });
   });
 
@@ -167,8 +172,9 @@ describe("recurringRuleInputSchema", () => {
     [{ dayOfMonth: "32" }, "Jour entre 1 et 31."],
     [{ interval: "0" }, "Intervalle invalide."],
     [{ label: "", merchantName: "" }, "Saisissez un libellé."],
-    [{ kind: "transfer", toAccountId: "" }, "Choisissez le compte d'épargne."],
-    [{ kind: "transfer", toAccountId: A }, "Choisissez deux comptes différents."],
+    [{ kind: "transfer", toAccountId: B, label: "" }, "Saisissez un libellé."],
+    [{ kind: "transfer", label: "Épargne", toAccountId: "" }, "Choisissez le compte d'épargne."],
+    [{ kind: "transfer", label: "Épargne", toAccountId: A }, "Choisissez deux comptes différents."],
     [{ endOn: "2026-11-01" }, "La fin précède le début."],
     [{ startOn: "2026-02-30" }, "Date invalide."],
   ])("%j -> %s", (patch, message) => {

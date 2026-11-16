@@ -10,6 +10,7 @@
  * accounts does not change it.
  */
 import type { Cents } from "./money";
+import { daysBetweenInclusive } from "./recurrence";
 
 export type PlannedFlow = {
   accountId: string;
@@ -52,7 +53,7 @@ export function computeResteAVivre(input: {
     else income += effect;
   }
   const resteCents = input.spendableBalanceCents + charges + income;
-  const daysLeft = Math.max(1, dayCount(input.today, input.monthEnd));
+  const daysLeft = Math.max(1, daysBetweenInclusive(input.today, input.monthEnd));
   return {
     resteCents,
     plannedChargesCents: charges,
@@ -60,9 +61,4 @@ export function computeResteAVivre(input: {
     daysLeft,
     perDayCents: resteCents > 0 ? Math.floor(resteCents / daysLeft) : 0,
   };
-}
-
-function dayCount(from: string, to: string): number {
-  const n = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86_400_000;
-  return n(to) - n(from) + 1;
 }

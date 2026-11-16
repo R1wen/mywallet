@@ -6,7 +6,9 @@ import {
   firstOccurrenceOnOrAfter,
   initialNextRunOn,
   occurrencesBetween,
+  periodKey,
   planGeneration,
+  startOfNextPeriod,
   type RecurrenceSpec,
 } from "./recurrence";
 
@@ -235,6 +237,27 @@ describe("initialNextRunOn", () => {
     expect(initialNextRunOn(monthly(5, "2026-01-05", { endOn: "2026-06-30" }), "2026-11-16")).toBe(
       "2026-07-01",
     );
+  });
+});
+
+describe("startOfNextPeriod", () => {
+  it.each([
+    ["monthly", "2026-12-05", "2027-01-01"],
+    ["monthly", "2026-02-28", "2026-03-01"],
+    ["yearly", "2026-07-14", "2027-01-01"],
+    ["weekly", "2026-11-16", "2026-11-17"],
+  ] as const)("%s after %s -> %s", (frequency, day, expected) => {
+    expect(startOfNextPeriod(frequency, day)).toBe(expected);
+  });
+});
+
+describe("periodKey", () => {
+  it.each([
+    ["monthly", "2026-12-05", "2026-12"],
+    ["yearly", "2026-12-05", "2026"],
+    ["weekly", "2026-12-05", "2026-12-05"],
+  ] as const)("%s %s -> %s", (frequency, day, key) => {
+    expect(periodKey(frequency, day)).toBe(key);
   });
 });
 

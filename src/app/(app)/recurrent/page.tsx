@@ -20,7 +20,8 @@ import {
   toParisDateString,
   type MonthKey,
 } from "@/lib/domain/dates";
-import { listAccounts } from "@/lib/server/accounts";
+import { GENERATION_HORIZON_MONTHS } from "@/lib/domain/recurrence";
+import { listAccountsWithBalance } from "@/lib/server/accounts";
 import {
   generateOccurrences,
   generationLimit,
@@ -40,8 +41,6 @@ export default function RecurringPage({ searchParams }: PageProps<"/recurrent">)
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-/** Months ahead the calendar can show (occurrences are generated that far, ADR-024). */
-const MAX_AHEAD = 12;
 
 async function Recurring({ searchParams }: Pick<PageProps<"/recurrent">, "searchParams">) {
   const user = await requireUser();
@@ -49,7 +48,8 @@ async function Recurring({ searchParams }: Pick<PageProps<"/recurrent">, "search
   const view = first(params.vue) === "regles" ? "regles" : "calendrier";
   const today = toParisDateString(new Date());
   const now = parseMonthKey(today.slice(0, 7))!;
-  const last = shiftMonth(now.year, now.month, MAX_AHEAD);
+  // Le calendrier ne va pas plus loin que la génération des échéances (ADR-024).
+  const last = shiftMonth(now.year, now.month, GENERATION_HORIZON_MONTHS);
   let month = parseMonthKey(first(params.mois)) ?? now;
   if (month.year * 12 + month.month > last.year * 12 + last.month) month = last;
   const bounds = monthBounds(month.year, month.month);
@@ -60,16 +60,20 @@ async function Recurring({ searchParams }: Pick<PageProps<"/recurrent">, "search
     user.id,
     generationLimit(bounds.to > currentEnd ? bounds.to : currentEnd, today),
   );
-  const [rav, occurrences, rules, accounts] = await Promise.all([
-    getResteAVivre(user.id, today),
+  const isCurrent = month.year === now.year && month.month === now.month;
+  const [occurrences, rules, accounts] = await Promise.all([
     listOccurrences(user.id, bounds),
     listRules(user.id, today),
-    listAccounts(user.id),
+    listAccountsWithBalance(user.id),
   ]);
+  // Comptes et échéances du mois en cours déjà chargés : réutilisés pour le reste à vivre.
+  const rav = await getResteAVivre(user.id, today, undefined, {
+    accounts,
+    monthOccurrences: isCurrent ? occurrences : undefined,
+  });
 
   const prev = shiftMonth(month.year, month.month, -1);
   const next = shiftMonth(month.year, month.month, 1);
-  const isCurrent = month.year === now.year && month.month === now.month;
   const isLast = month.year === last.year && month.month === last.month;
 
   return (

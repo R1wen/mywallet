@@ -70,7 +70,8 @@ export const recurringRuleInputSchema = z
   .transform((v, ctx) => {
     const cents = parseMagnitude(v.amount, ctx);
     if (cents === null) return z.NEVER;
-    const label = v.label || v.merchantName;
+    // Une épargne n'a pas de magasin : un nom resté dans le champ masqué ne sert pas de libellé.
+    const label = v.kind === "transfer" ? v.label : v.label || v.merchantName;
     if (!label) {
       ctx.addIssue({ code: "custom", path: ["label"], message: "Saisissez un libellé." });
       return z.NEVER;

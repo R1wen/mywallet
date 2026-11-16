@@ -405,3 +405,108 @@ describe("isolation", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("regressions (code review)", () => {
+  const ofRule = async (ruleId: string, from = "2026-11-01", to = "2027-01-31") =>
+    (await listOccurrences(A, { from, to })).filter((o) => o.ruleId === ruleId);
+
+  it("editing a validated saving from its credit leg keeps the occurrence on the debit leg", async () => {
+    const id = await create({
+      kind: "transfer",
+      label: "Épargne vacances",
+      amountCents: -5_000,
+      merchantName: "",
+      toAccountId: savings,
+      dayOfMonth: 25,
+    });
+    await generateOccurrences(A, "2026-11-30");
+    const [o] = await ofRule(id, "2026-11-25", "2026-11-25");
+    const r = await confirmOccurrence(A, o!.id, {
+      magnitudeCents: 5_000,
+      occurredOn: "2026-11-25",
+      accountId: checking,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const [debit] = await db
+      .select({ amountCents: transactions.amountCents, group: transactions.transferGroupId })
+      .from(transactions)
+      .where(eq(transactions.id, r.data.transactionId));
+    expect(debit?.amountCents).toBe(-5_000);
+    const [credit] = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(
+        and(eq(transactions.transferGroupId, debit!.group!), eq(transactions.amountCents, 5_000)),
+      );
+    const edited = await updateTransaction(A, credit!.id, {
+      kind: "transfer",
+      amountCents: 6_000,
+      occurredOn: "2026-11-25",
+      label: "Épargne vacances",
+      merchantName: "",
+      accountId: checking,
+      toAccountId: savings,
+      categoryId: null,
+      notes: null,
+    });
+    expect(edited).toEqual({ ok: true, data: { id: r.data.transactionId } });
+    const [after] = await ofRule(id, "2026-11-25", "2026-11-25");
+    expect(after).toMatchObject({ transactionId: r.data.transactionId, actualCents: -6_000 });
+  });
+
+  it("rescheduling does not add a second occurrence in a month already validated", async () => {
+    const id = await create({ label: "Assurance", merchantName: "", dayOfMonth: 5 });
+    await generateOccurrences(A, "2026-12-31");
+    const [dec] = await ofRule(id);
+    expect(dec?.dueOn).toBe("2026-12-05");
+    await confirmOccurrence(A, dec!.id, {
+      magnitudeCents: 89_000,
+      occurredOn: TODAY,
+      accountId: checking,
+    });
+    expect(
+      (
+        await updateRule(
+          A,
+          id,
+          rule({ label: "Assurance", merchantName: "", dayOfMonth: 10 }),
+          TODAY,
+        )
+      ).ok,
+    ).toBe(true);
+    await generateOccurrences(A, "2027-01-31");
+    expect((await ofRule(id)).map((o) => [o.dueOn, o.status])).toEqual([
+      ["2026-12-05", "confirmed"],
+      ["2027-01-10", "planned"],
+    ]);
+  });
+
+  it("an overdue planned occurrence follows the rule's new kind and amount", async () => {
+    const r = await createRule(
+      A,
+      rule({ label: "Erreur", merchantName: "", dayOfMonth: 12, startOn: "2026-11-12" }),
+      "2026-11-10",
+    );
+    if (!r.ok) throw new Error(r.error);
+    await generateOccurrences(A, "2026-11-30");
+    expect((await ofRule(r.data.id, "2026-11-12", "2026-11-12"))[0]?.amountCents).toBe(-89_000);
+    const updated = await updateRule(
+      A,
+      r.data.id,
+      rule({
+        kind: "income",
+        label: "Erreur",
+        merchantName: "",
+        amountCents: 5_000,
+        dayOfMonth: 12,
+        startOn: "2026-11-12",
+      }),
+      TODAY,
+    );
+    expect(updated.ok).toBe(true);
+    expect(await ofRule(r.data.id, "2026-11-12", "2026-11-12")).toMatchObject([
+      { status: "planned", amountCents: 5_000, kind: "income" },
+    ]);
+  });
+});
