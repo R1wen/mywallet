@@ -72,7 +72,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Tests : 557 unitaires (dont non-régression du parseur sur les 18 fixtures et entrées hostiles), 90 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
 - [x] Captures (`docs/screens/sprint-3/`), `ui-reviewer` (2 passes), `security-reviewer` (ReDoS du parseur, appels de modèle, quotas, garde de rattachement : corrigés), `/code-review` (9 corrections)
 - [ ] Import CSV : un virement reçu qui rembourse une créance est créé en revenu (lien avec les créances au Sprint 4)
-- [ ] PR, CI verte
+- [x] PR #5, CI verte (alerte CodeQL corrigée)
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
