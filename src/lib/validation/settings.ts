@@ -28,13 +28,13 @@ export const accountInputSchema = z
   .transform((v, ctx) => {
     let openingBalanceCents = 0;
     if (v.openingBalance) {
-      const negative = /^[-−]/.test(v.openingBalance);
-      const cents = parseAmountToCents(v.openingBalance.replace(/^[-−+]\s*/, ""));
+      // Signe moins typographique (U+2212) ramené au tiret ; le parseur gère un seul signe.
+      const cents = parseAmountToCents(v.openingBalance.replace(/−/g, "-"));
       if (cents === null) {
         ctx.addIssue({ code: "custom", path: ["openingBalance"], message: "Montant invalide." });
         return z.NEVER;
       }
-      openingBalanceCents = negative ? -cents : cents;
+      openingBalanceCents = cents;
     }
     return {
       name: v.name,

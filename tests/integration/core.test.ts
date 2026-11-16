@@ -191,7 +191,7 @@ describe("transactions", () => {
       A,
       filters({ du: "2026-10-01", au: "2026-10-31", tri: "montant", ordre: "asc" }),
     );
-    expect(october.rows.map((r) => r.amountCents)).toEqual([-999, -1]);
+    expect(october.rows.map((r) => r.amountCents)).toEqual([-1, -999]);
     const courses = await listTransactions(A, filters({ categorie: cat.get("Alimentation")! }));
     expect(courses.rows.every((r) => r.categoryName === "Courses")).toBe(true);
     expect(courses.total).toBeGreaterThan(0);
@@ -443,6 +443,46 @@ describe("favicon cache", () => {
     } finally {
       vi.unstubAllGlobals();
       await db.delete(logoCache).where(eq(logoCache.domain, "svg-only.fr"));
+    }
+  });
+});
+
+describe("favicon outages", () => {
+  it("does not cache a timeout or a 5xx as a missing logo", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new DOMException("timeout", "TimeoutError");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      expect(await getFavicon("panne-passagere.fr")).toBeNull();
+      const rows = await db
+        .select()
+        .from(logoCache)
+        .where(eq(logoCache.domain, "panne-passagere.fr"));
+      expect(rows).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("sorting by amount", () => {
+  it("orders by size whatever the direction of the movement", async () => {
+    const [C = ""] = await createUsers(1);
+    try {
+      await provisionUser(C);
+      const [acc] = await listAccountsWithBalance(C);
+      for (const [kind, amountCents] of [
+        ["expense", 120000],
+        ["expense", 200],
+        ["income", 5000],
+      ] as const) {
+        await createTransaction(C, input({ accountId: acc!.id, kind, amountCents }));
+      }
+      const r = await listTransactions(C, filters({ tri: "montant", ordre: "desc" }));
+      expect(r.rows.map((t) => t.amountCents)).toEqual([-120000, 5000, -200]);
+    } finally {
+      await deleteUsers([C]);
     }
   });
 });

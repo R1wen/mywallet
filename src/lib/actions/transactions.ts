@@ -2,7 +2,7 @@
 
 import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
-import { listAccounts } from "@/lib/server/accounts";
+import { getAccount, listAccounts } from "@/lib/server/accounts";
 import { listCategories, type CategoryRow } from "@/lib/server/categories";
 import { listMerchantNames } from "@/lib/server/merchants";
 import { fail, type Result } from "@/lib/server/result";
@@ -27,24 +27,37 @@ export type TransactionFormData = {
   merchants: string[];
 };
 
-export async function loadTransactionFormData(): Promise<TransactionFormData> {
+/**
+ * Everything the dialog needs in one round trip: form choices and, when editing, the
+ * transaction. Archived accounts are listed only when the edited transaction uses them,
+ * so editing an old movement never silently moves it to another account.
+ */
+export async function loadTransactionDialog(editId: unknown): Promise<{
+  data: TransactionFormData;
+  transaction: TransactionDetail | null;
+}> {
   const user = await requireUser();
-  const [accounts, categories, merchants] = await Promise.all([
+  const id = editId === null ? null : idSchema.safeParse(editId);
+  const [accounts, categories, merchants, transaction] = await Promise.all([
     listAccounts(user.id),
     listCategories(user.id),
     listMerchantNames(user.id),
+    id?.success ? getTransaction(user.id, id.data) : Promise.resolve(null),
   ]);
+  const options = accounts.map((a) => ({ id: a.id, name: a.name }));
+  for (const accountId of [transaction?.accountId, transaction?.toAccountId]) {
+    if (!accountId || options.some((o) => o.id === accountId)) continue;
+    const archived = await getAccount(user.id, accountId);
+    if (archived) options.push({ id: archived.id, name: `${archived.name} (archivé)` });
+  }
   return {
-    accounts: accounts.map((a) => ({ id: a.id, name: a.name })),
-    categories: categories.map(({ id, parentId, name, kind }) => ({ id, parentId, name, kind })),
-    merchants: merchants.map((m) => m.name),
+    data: {
+      accounts: options,
+      categories: categories.map(({ id, parentId, name, kind }) => ({ id, parentId, name, kind })),
+      merchants: merchants.map((m) => m.name),
+    },
+    transaction,
   };
-}
-
-export async function loadTransaction(id: unknown): Promise<TransactionDetail | null> {
-  const user = await requireUser();
-  const parsed = idSchema.safeParse(id);
-  return parsed.success ? getTransaction(user.id, parsed.data) : null;
 }
 
 export async function saveTransaction(

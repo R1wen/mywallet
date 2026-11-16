@@ -50,8 +50,8 @@ export async function getMonthDashboard(
         ),
       ),
     listCategories(userId, db),
-    listTransactions(userId, { tri: "date", ordre: "desc", page: 1, du: from, au: to }, db).then(
-      (r) => r.rows.slice(0, 8),
+    listTransactions(userId, { tri: "date", ordre: "desc", page: 1, du: from, au: to }, db, 8).then(
+      (r) => r.rows,
     ),
   ]);
 

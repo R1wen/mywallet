@@ -119,6 +119,16 @@ describe("accountInputSchema", () => {
   });
 });
 
+it("rejects a doubled sign instead of flipping it", () => {
+  const r = accountInputSchema.safeParse({
+    name: "x",
+    type: "cash",
+    institution: "",
+    openingBalance: "--120,50",
+  });
+  expect(r.success).toBe(false);
+});
+
 describe("merchantInputSchema", () => {
   it("normalizes the name, domain and aliases", () => {
     expect(

@@ -20,13 +20,21 @@ const TIMEOUT_MS = 4000;
 
 export type LogoImage = { contentType: RasterImageType; data: Buffer };
 
-async function fetchFavicon(domain: string): Promise<LogoImage | null> {
+/**
+ * "missing" only when a provider answered without a usable image (404, not an image, too
+ * big). Timeouts, network errors and 5xx are "unavailable": nothing is cached, so a short
+ * provider outage does not hide a logo for days.
+ */
+async function fetchFavicon(domain: string): Promise<LogoImage | "missing" | "unavailable"> {
+  let answered = false;
   for (const url of PROVIDERS.map((p) => p(domain))) {
     try {
       const res = await fetch(url, {
         signal: AbortSignal.timeout(TIMEOUT_MS),
         headers: { "user-agent": "myWallet-logo-fetcher" },
       });
+      if (res.status >= 500) continue;
+      answered = true;
       if (!res.ok || !ALLOWED_HOSTS.test(new URL(res.url || url).hostname)) continue;
       const declared = Number(res.headers.get("content-length") ?? 0);
       if (declared > LOGO_CACHE_MAX_BYTES) continue;
@@ -35,10 +43,10 @@ async function fetchFavicon(domain: string): Promise<LogoImage | null> {
       const contentType = detectImageType(data);
       if (contentType) return { contentType, data };
     } catch {
-      // Provider down or slow: try the next one, then fall back to the monogram.
+      // Provider down or slow: try the next one.
     }
   }
-  return null;
+  return answered ? "missing" : "unavailable";
 }
 
 /** Favicon for a domain, from the cache when fresh, otherwise fetched and cached. */
@@ -55,7 +63,9 @@ export async function getFavicon(
       ? { contentType: cached.contentType as RasterImageType, data: cached.data }
       : null;
   }
-  const image = await fetchFavicon(domain);
+  const result = await fetchFavicon(domain);
+  if (result === "unavailable") return null;
+  const image = result === "missing" ? null : result;
   const row = image
     ? { status: "ok" as const, contentType: image.contentType, data: image.data }
     : { status: "missing" as const, contentType: null, data: null };

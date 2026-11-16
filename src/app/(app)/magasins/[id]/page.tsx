@@ -38,7 +38,7 @@ async function MerchantDetail({ params }: Pick<PageProps<"/magasins/[id]">, "par
     getMerchant(user.id, id.data),
     listCategories(user.id),
     listMerchantNames(user.id),
-    listTransactions(user.id, parseTransactionFilters({ marchand: id.data })),
+    listTransactions(user.id, parseTransactionFilters({ marchand: id.data }), undefined, 20),
   ]);
   if (!merchant) notFound();
 
@@ -103,7 +103,7 @@ async function MerchantDetail({ params }: Pick<PageProps<"/magasins/[id]">, "par
               title="Aucun mouvement chez ce magasin pour l'instant."
             />
           ) : (
-            <TransactionRows rows={recent.rows.slice(0, 20)} compact />
+            <TransactionRows rows={recent.rows} compact />
           )}
         </Card>
         <div className="flex flex-col gap-4">

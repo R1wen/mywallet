@@ -16,7 +16,7 @@ import {
 } from "drizzle-orm";
 import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
 import { accounts, categories, merchants, transactions } from "@/lib/db/schema";
-import { findMerchantByLabel, normalizeMerchantName } from "@/lib/domain/merchant";
+import { normalizeMerchantName } from "@/lib/domain/merchant";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
 import {
@@ -25,6 +25,7 @@ import {
   type TransactionInput,
 } from "@/lib/validation/transaction";
 import {
+  constraintOf,
   fail,
   isCheckViolation,
   isForeignKeyViolation,
@@ -96,13 +97,15 @@ export async function listTransactions(
   userId: string,
   filters: TransactionFilters,
   db: Db = defaultDb,
+  /** Rows per page (dashboard and merchant page need only a few). */
+  pageSize: number = PAGE_SIZE,
 ): Promise<{ rows: TransactionListRow[]; total: number; page: number; pageCount: number }> {
   const categoryIds = await expandCategory(userId, filters.categorie, db);
   const where = filterConditions(userId, filters, categoryIds);
   const dir = filters.ordre === "asc" ? asc : desc;
   const primary =
     filters.tri === "montant"
-      ? dir(transactions.amountCents)
+      ? dir(sql`abs(${transactions.amountCents})`) // par taille, quel que soit le sens
       : filters.tri === "libelle"
         ? dir(sql`lower(${transactions.label})`)
         : dir(transactions.occurredOn);
@@ -116,7 +119,7 @@ export async function listTransactions(
     )
     .where(where);
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(filters.page, pageCount);
 
   const rows = await db
@@ -156,8 +159,8 @@ export async function listTransactions(
     )
     .where(where)
     .orderBy(primary, desc(transactions.createdAt), desc(transactions.id))
-    .limit(PAGE_SIZE)
-    .offset((page - 1) * PAGE_SIZE);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   return {
     rows: rows.map(
@@ -256,26 +259,33 @@ const EXPECTED_CATEGORY_KIND = {
 
 /** Links the typed merchant name to an existing merchant (name or alias) or creates it. */
 async function resolveMerchant(userId: string, name: string, tx: Tx) {
-  if (!name) return null;
   const normalizedName = normalizeMerchantName(name);
   if (!normalizedName) return null;
-  const known = await tx
-    .select({
-      id: merchants.id,
-      normalizedName: merchants.normalizedName,
-      aliases: merchants.aliases,
-      defaultCategoryId: merchants.defaultCategoryId,
-    })
-    .from(merchants)
-    .where(eq(merchants.userId, userId));
-  const match = findMerchantByLabel(name, known);
-  if (match) return match;
+  const lookup = () =>
+    tx
+      .select({ id: merchants.id, defaultCategoryId: merchants.defaultCategoryId })
+      .from(merchants)
+      .where(
+        and(
+          eq(merchants.userId, userId),
+          or(
+            eq(merchants.normalizedName, normalizedName),
+            sql`${normalizedName} = any(${merchants.aliases})`,
+          ),
+        ),
+      )
+      // Le nom exact prime sur un alias.
+      .orderBy(sql`${merchants.normalizedName} = ${normalizedName} desc`)
+      .limit(1);
+  const [known] = await lookup();
+  if (known) return known;
   const [created] = await tx
     .insert(merchants)
     .values({ userId, name, normalizedName })
     .onConflictDoNothing()
     .returning({ id: merchants.id, defaultCategoryId: merchants.defaultCategoryId });
-  return created ?? null;
+  // Conflit : créé entre-temps par une autre requête (double envoi), on le relit.
+  return created ?? (await lookup())[0] ?? null;
 }
 
 async function checkReferences(
@@ -419,7 +429,7 @@ export async function updateTransaction(
   }
 }
 
-/** Deletes a transaction (both legs for a transfer). Lines of a receipt cascade. */
+/** Deletes a transaction (both legs for a transfer); its receipt lines and pending claims cascade. */
 export async function deleteTransaction(
   userId: string,
   id: string,
@@ -451,7 +461,9 @@ export async function deleteTransaction(
   } catch (e) {
     if (isForeignKeyViolation(e)) {
       return fail(
-        "Ce mouvement est lié à un remboursement reçu : annulez d'abord ce remboursement.",
+        constraintOf(e)?.startsWith("receipts_")
+          ? "Ce mouvement est lié à un ticket : détachez d'abord le ticket."
+          : "Ce mouvement est lié à un remboursement reçu : annulez d'abord ce remboursement.",
       );
     }
     throw e;

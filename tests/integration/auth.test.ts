@@ -8,6 +8,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { auth } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { authAccount, session, user } from "@/lib/db/schema";
+import { listAccounts } from "@/lib/server/accounts";
+import { listCategories } from "@/lib/server/categories";
 
 const email = `auth-${randomUUID()}@test.local`;
 const password = "mot-de-passe-tres-sur-42";
@@ -39,6 +41,12 @@ describe("auth (Better Auth + Drizzle)", () => {
     expect(acc?.providerId).toBe("credential");
     expect(acc?.password).toBeTruthy();
     expect(acc?.password).not.toContain(password);
+  });
+
+  it("provisions categories, merchants and an account on the first session", async () => {
+    const [u] = await db.select().from(user).where(eq(user.email, email));
+    expect((await listCategories(u!.id)).length).toBeGreaterThan(30);
+    expect((await listAccounts(u!.id)).map((a) => a.name)).toEqual(["Compte courant"]);
   });
 
   it("resolves the session from the cookie", async () => {

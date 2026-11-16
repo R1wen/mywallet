@@ -7,17 +7,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  loadTransaction,
-  loadTransactionFormData,
-  type TransactionFormData,
-} from "@/lib/actions/transactions";
+import { loadTransactionDialog, type TransactionFormData } from "@/lib/actions/transactions";
 import type { TransactionDetail } from "@/lib/server/transactions";
 import { TransactionForm } from "./transaction-form";
 
@@ -46,14 +43,16 @@ const isTyping = (el: EventTarget | null) =>
  */
 export function TransactionDialogProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({ status: "closed" });
+  // Numéro de la dernière ouverture : une réponse tardive (fenêtre fermée entre-temps,
+  // ou autre transaction ouverte depuis) est ignorée.
+  const request = useRef(0);
 
   const open = useCallback(async (editId: string | null) => {
+    const current = ++request.current;
     setState({ status: "loading", editId });
     try {
-      const [data, transaction] = await Promise.all([
-        loadTransactionFormData(),
-        editId ? loadTransaction(editId) : Promise.resolve(null),
-      ]);
+      const { data, transaction } = await loadTransactionDialog(editId);
+      if (current !== request.current) return;
       if (editId && !transaction) {
         setState({ status: "error", message: "Cette transaction n'existe plus." });
       } else if (data.accounts.length === 0) {
@@ -62,7 +61,9 @@ export function TransactionDialogProvider({ children }: { children: ReactNode })
         setState({ status: "ready", data, transaction });
       }
     } catch {
-      setState({ status: "error", message: "Chargement impossible. Réessayez." });
+      if (current === request.current) {
+        setState({ status: "error", message: "Chargement impossible. Réessayez." });
+      }
     }
   }, []);
 
@@ -82,7 +83,10 @@ export function TransactionDialogProvider({ children }: { children: ReactNode })
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const close = () => setState({ status: "closed" });
+  const close = () => {
+    request.current++;
+    setState({ status: "closed" });
+  };
   const isEdit =
     (state.status === "loading" && state.editId !== null) ||
     (state.status === "ready" && state.transaction !== null);
