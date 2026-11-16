@@ -1,0 +1,51 @@
+{
+  "merchant": "Leroy Merlin",
+  "merchantRaw": "LEROY MERLIN 0071",
+  "date": "2026-07-11",
+  "time": "15:26",
+  "currency": "EUR",
+  "totalCents": 13306,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 2000,
+      "baseCents": 11088,
+      "vatCents": 2218
+    }
+  ],
+  "items": [
+    {
+      "label": "PERCEUSE VISSEUSE 18V",
+      "quantity": 1,
+      "unitPriceCents": 8990,
+      "totalCents": 8990
+    },
+    {
+      "label": "CHEVILLES X100",
+      "quantity": 1,
+      "unitPriceCents": 495,
+      "totalCents": 495
+    },
+    {
+      "label": "VIS BOIS 4X40 X200",
+      "quantity": 2,
+      "unitPriceCents": 790,
+      "totalCents": 1580
+    },
+    {
+      "label": "PEINTURE BLANC MAT 2L",
+      "quantity": 1,
+      "unitPriceCents": 2490,
+      "totalCents": 2490
+    }
+  ],
+  "discountsCents": -249,
+  "returnDeadline": null,
+  "warrantyUntil": "2028-07-11",
+  "difficulty": [
+    "diy",
+    "warranty",
+    "discount",
+    "rotated"
+  ]
+}

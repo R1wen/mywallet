@@ -96,10 +96,21 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                     Nouvelle transaction
                     <Kbd className="ml-auto">N</Kbd>
                   </Command.Item>
-                  <Command.Item disabled className={itemClass} value="ajouter un ticket">
+                  <Command.Item
+                    className={itemClass}
+                    value="ajouter un ticket photo facture pdf"
+                    onSelect={() => run(() => router.push("/tickets"))}
+                  >
                     <Plus className="size-4" aria-hidden />
                     Ajouter un ticket
-                    <span className="ml-auto text-xs text-subtle">Sprint 3</span>
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="importer un relevé bancaire csv"
+                    onSelect={() => run(() => router.push("/transactions/import"))}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Importer un relevé bancaire
                   </Command.Item>
                   <Command.Item
                     className={itemClass}

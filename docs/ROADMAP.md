@@ -1,4 +1,4 @@
-﻿# Roadmap myWallet
+# Roadmap myWallet
 
 Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI verte)
 
@@ -6,8 +6,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | ------ | ---------------------------------------------------------------------------- | --------------------- | ------------ |
 | 0      | Fondations                                                                   | `sprint/0-fondations` | [x]          |
 | 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [x]          |
-| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [~] en cours |
-| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [ ]          |
+| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [x]          |
+| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [~] en cours |
 | 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [ ]          |
 | 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [ ]          |
 | 6      | Analyses                                                                     | `sprint/6-analyses`   | [ ]          |
@@ -55,12 +55,33 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Captures (`docs/screens/sprint-2/`), `ui-reviewer` (corrections : cibles tactiles 44 px des boutons, prochaine échéance réelle, signe des revenus validés, mise en page mobile)
 - [x] `/code-review` (10 corrections : jambe débitrice stable d'un virement, replanification sans doublon dans un mois validé, échéances en retard suivant le type de la règle, libellé d'épargne, requêtes en double)
 - [x] PR #4, CI verte
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #4 par l'utilisateur)
+
+## Sprint 3 : Import intelligent
+
+- [x] Décisions validées : fichiers dans PostgreSQL, rapprochement sans doublon, structuration règles + Ollama + Gemini, fixtures synthétiques (ADR-027 à 030)
+- [x] CSP (ADR-031) : fixe, limitée à l'origine ; nonce écarté (incompatible avec Cache Components)
+- [x] Domaine (TDD) : signature des fichiers, parseur de tickets FR, validation déterministe et confiance, doublons, CSV bancaire, rapprochement
+- [x] Fixtures : 18 tickets synthétiques (16 images, 2 PDF) avec résultats attendus et sorties OCR
+- [x] Spike OCR (`ocr-benchmarker`) : tesseract.js par défaut, PaddleOCR non livré (ADR-008, `docs/OCR-BENCHMARK.md`) ; parseur 18/18 sur total et date
+- [ ] Benchmark sur les vrais tickets (`fixtures/receipts-private/`, à déposer par l'utilisateur)
+- [x] Schéma : fichiers, rapprochement, préréglages CSV, réglages d'import (migration 0003 additive)
+- [x] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
+- [x] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV, réglages
+- [x] Structureurs Ollama et Gemini (désactivés sans configuration, Gemini avec consentement)
+- [x] Tests : 557 unitaires (dont non-régression du parseur sur les 18 fixtures et entrées hostiles), 90 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
+- [x] Captures (`docs/screens/sprint-3/`), `ui-reviewer` (2 passes), `security-reviewer` (ReDoS du parseur, appels de modèle, quotas, garde de rattachement : corrigés), `/code-review` (9 corrections)
+- [ ] Import CSV : un virement reçu qui rembourse une créance est créé en revenu (lien avec les créances au Sprint 4)
+- [x] PR #5, CI verte (alerte CodeQL corrigée)
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
-- CSP avec nonce dans `proxy.ts` : avant le Sprint 3 (imports de fichiers, logos externes).
 - Docker derrière un proxy : configurer `advanced.ipAddress` de Better Auth (IP de confiance) avant tout auto-hébergement exposé.
-- Lien optionnel entre un avoir et l'achat d'origine (ADR-020) : à voir avec l'import de tickets (Sprint 3).
+- Lien optionnel entre un avoir et l'achat d'origine (ADR-020).
+- Repli OCR PaddleOCR (31 Mo de modèles à auto-héberger) : selon le benchmark sur les vrais tickets.
+- Catégorie au niveau de l'article et apprentissage des corrections (import, Sprint 3) : avec les budgets (Sprint 5).
 - Logo.dev (clé gratuite + attribution) comme source de logos supplémentaire (ADR-022).
+- RGPD : export complet des données (y compris fichiers de tickets) et suppression du compte : Sprint 8.
+- Override pnpm d’esbuild ≥ 0.25 (avis modéré, dépendance de développement de drizzle-kit).
 - Évals des skills projet (skill-creator) : à lancer quand les skills auront servi sur un sprint.

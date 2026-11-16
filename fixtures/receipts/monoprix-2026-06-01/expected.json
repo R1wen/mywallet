@@ -1,0 +1,62 @@
+{
+  "merchant": "Monoprix",
+  "merchantRaw": "MONOPRIX 0614",
+  "date": "2026-06-27",
+  "time": "19:58",
+  "currency": "EUR",
+  "totalCents": 2267,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 918,
+      "vatCents": 51
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 1082,
+      "vatCents": 216
+    }
+  ],
+  "items": [
+    {
+      "label": "SALADE CESAR",
+      "quantity": 1,
+      "unitPriceCents": 450,
+      "totalCents": 450
+    },
+    {
+      "label": "EAU GAZEUSE 50CL",
+      "quantity": 2,
+      "unitPriceCents": 85,
+      "totalCents": 170
+    },
+    {
+      "label": "FRAISES 250G",
+      "quantity": 1,
+      "unitPriceCents": 349,
+      "totalCents": 349
+    },
+    {
+      "label": "GEL DOUCHE",
+      "quantity": 1,
+      "unitPriceCents": 299,
+      "totalCents": 299
+    },
+    {
+      "label": "BOUGIE PARFUMEE",
+      "quantity": 1,
+      "unitPriceCents": 999,
+      "totalCents": 999
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "photo",
+    "skewed",
+    "noise",
+    "supermarket"
+  ]
+}

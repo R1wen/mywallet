@@ -1,0 +1,38 @@
+{
+  "merchant": "TotalEnergies",
+  "merchantRaw": "TOTALENERGIES RELAIS",
+  "date": "2026-09-05",
+  "time": "08:12",
+  "currency": "EUR",
+  "totalCents": 7795,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 2000,
+      "baseCents": 6496,
+      "vatCents": 1299
+    }
+  ],
+  "items": [
+    {
+      "label": "GAZOLE",
+      "quantity": 38.52,
+      "unitPriceCents": 179,
+      "totalCents": 6895
+    },
+    {
+      "label": "LAVAGE PROGRAMME 2",
+      "quantity": 1,
+      "unitPriceCents": 900,
+      "totalCents": 900
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "fuel",
+    "litres",
+    "blur"
+  ]
+}

@@ -58,6 +58,13 @@ async function main() {
     for (const route of routes) {
       await page.goto(`${BASE_URL}${route}`, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
+      // A protected route that lands on the sign-in page means the capture is useless.
+      const landed = new URL(page.url()).pathname;
+      if (landed.startsWith("/connexion") && !route.startsWith("/connexion")) {
+        throw new Error(
+          `${route} redirige vers /connexion : définir SCREENS_EMAIL et SCREENS_PASSWORD.`,
+        );
+      }
       const file = path.join(outDir, `${slug(route)}-${vp.name}.png`);
       await page.screenshot({ path: file, fullPage: true });
       console.log("saved", file);

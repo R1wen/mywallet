@@ -1,0 +1,28 @@
+    PHARMACIE CENTRALE
+          Pharmacien titulaire
+            5 BD VICTOR HUGO
+               06000 NICE
+        SIRET 000 000 606 00014
+
+06/11/2026 16:03
+----------------------------------------
+PARACETAMOL 1G CPR                4,36 1
+  2 x 2,18
+SIROP TOUX SECHE                  6,95 2
+SERUM PHYSIO X40                  4,49 3
+CREME MAINS 50ML                  7,90 3
+----------------------------------------
+NB ARTICLES : 5
+TOTAL TTC        23,70 EUR
+
+CB                                 23,70
+CARTE BANCAIRE SANS CONTACT
+XXXX XXXX XXXX 3047
+A0000000421010  CB
+
+TAUX              HT       TVA       TTC
+1 2,10%         4,27      0,09      4,36
+2 10,00%        6,32      0,63      6,95
+3 20,00%       10,33      2,06     12,39
+
+          Prenez soin de vous

@@ -1,0 +1,45 @@
+{
+  "merchant": "Cdiscount",
+  "merchantRaw": "CDISCOUNT",
+  "date": "2026-09-14",
+  "time": null,
+  "currency": "EUR",
+  "totalCents": 19279,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 2000,
+      "baseCents": 16066,
+      "vatCents": 3213
+    }
+  ],
+  "items": [
+    {
+      "label": "Aspirateur balai",
+      "quantity": 1,
+      "unitPriceCents": 14990,
+      "totalCents": 14990
+    },
+    {
+      "label": "Lot 4 filtres",
+      "quantity": 1,
+      "unitPriceCents": 1290,
+      "totalCents": 1290
+    },
+    {
+      "label": "Cafetière filtre",
+      "quantity": 1,
+      "unitPriceCents": 3499,
+      "totalCents": 3499
+    }
+  ],
+  "discountsCents": -500,
+  "returnDeadline": "2026-10-14",
+  "warrantyUntil": null,
+  "difficulty": [
+    "pdf",
+    "e-commerce",
+    "return",
+    "net-a-payer"
+  ]
+}

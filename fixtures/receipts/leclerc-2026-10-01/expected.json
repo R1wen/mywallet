@@ -1,0 +1,207 @@
+{
+  "merchant": "E.Leclerc",
+  "merchantRaw": "E.LECLERC HYPER 0457",
+  "date": "2026-10-03",
+  "time": "11:07",
+  "currency": "EUR",
+  "totalCents": 12227,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 7288,
+      "vatCents": 401
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 3782,
+      "vatCents": 756
+    }
+  ],
+  "items": [
+    {
+      "label": "LAIT ENTIER BIO 1L",
+      "quantity": 6,
+      "unitPriceCents": 139,
+      "totalCents": 834
+    },
+    {
+      "label": "OEUFS PLEIN AIR X12",
+      "quantity": 1,
+      "unitPriceCents": 429,
+      "totalCents": 429
+    },
+    {
+      "label": "BEURRE DOUX 250G",
+      "quantity": 1,
+      "unitPriceCents": 259,
+      "totalCents": 259
+    },
+    {
+      "label": "EMMENTAL RAPE 200G",
+      "quantity": 1,
+      "unitPriceCents": 215,
+      "totalCents": 215
+    },
+    {
+      "label": "JAMBON BLANC X4",
+      "quantity": 1,
+      "unitPriceCents": 349,
+      "totalCents": 349
+    },
+    {
+      "label": "POULET FERMIER",
+      "quantity": 1.535,
+      "unitPriceCents": 1290,
+      "totalCents": 1980
+    },
+    {
+      "label": "POMMES GOLDEN",
+      "quantity": 1.12,
+      "unitPriceCents": 249,
+      "totalCents": 279
+    },
+    {
+      "label": "CAROTTES VRAC",
+      "quantity": 0.876,
+      "unitPriceCents": 149,
+      "totalCents": 131
+    },
+    {
+      "label": "TOMATES GRAPPE",
+      "quantity": 0.754,
+      "unitPriceCents": 349,
+      "totalCents": 263
+    },
+    {
+      "label": "SALADE BATAVIA",
+      "quantity": 1,
+      "unitPriceCents": 99,
+      "totalCents": 99
+    },
+    {
+      "label": "PATES PENNE 500G",
+      "quantity": 3,
+      "unitPriceCents": 109,
+      "totalCents": 327
+    },
+    {
+      "label": "RIZ BASMATI 1KG",
+      "quantity": 1,
+      "unitPriceCents": 289,
+      "totalCents": 289
+    },
+    {
+      "label": "HUILE OLIVE 1L",
+      "quantity": 1,
+      "unitPriceCents": 899,
+      "totalCents": 899
+    },
+    {
+      "label": "SUCRE EN POUDRE 1KG",
+      "quantity": 1,
+      "unitPriceCents": 119,
+      "totalCents": 119
+    },
+    {
+      "label": "FARINE T55 1KG",
+      "quantity": 1,
+      "unitPriceCents": 95,
+      "totalCents": 95
+    },
+    {
+      "label": "CHOCOLAT NOIR 70%",
+      "quantity": 2,
+      "unitPriceCents": 219,
+      "totalCents": 438
+    },
+    {
+      "label": "JUS ORANGE 1L",
+      "quantity": 2,
+      "unitPriceCents": 235,
+      "totalCents": 470
+    },
+    {
+      "label": "BIERE BLONDE 6X25CL",
+      "quantity": 1,
+      "unitPriceCents": 549,
+      "totalCents": 549
+    },
+    {
+      "label": "VIN ROUGE AOC 75CL",
+      "quantity": 1,
+      "unitPriceCents": 695,
+      "totalCents": 695
+    },
+    {
+      "label": "CHIPS NATURE 200G",
+      "quantity": 1,
+      "unitPriceCents": 179,
+      "totalCents": 179
+    },
+    {
+      "label": "BISCUITS PETIT BEURRE",
+      "quantity": 1,
+      "unitPriceCents": 145,
+      "totalCents": 145
+    },
+    {
+      "label": "SHAMPOOING 250ML",
+      "quantity": 1,
+      "unitPriceCents": 325,
+      "totalCents": 325
+    },
+    {
+      "label": "DENTIFRICE 75ML",
+      "quantity": 1,
+      "unitPriceCents": 219,
+      "totalCents": 219
+    },
+    {
+      "label": "PAPIER TOILETTE X12",
+      "quantity": 1,
+      "unitPriceCents": 589,
+      "totalCents": 589
+    },
+    {
+      "label": "LIQUIDE VAISSELLE",
+      "quantity": 1,
+      "unitPriceCents": 199,
+      "totalCents": 199
+    },
+    {
+      "label": "SACS POUBELLE 30L",
+      "quantity": 1,
+      "unitPriceCents": 249,
+      "totalCents": 249
+    },
+    {
+      "label": "CROQUETTES CHAT 2KG",
+      "quantity": 1,
+      "unitPriceCents": 1149,
+      "totalCents": 1149
+    },
+    {
+      "label": "PILES AA X4",
+      "quantity": 1,
+      "unitPriceCents": 599,
+      "totalCents": 599
+    },
+    {
+      "label": "SAC CABAS",
+      "quantity": 1,
+      "unitPriceCents": 15,
+      "totalCents": 15
+    }
+  ],
+  "discountsCents": -160,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "long",
+    "supermarket",
+    "weighted-item",
+    "discount",
+    "a-payer"
+  ]
+}

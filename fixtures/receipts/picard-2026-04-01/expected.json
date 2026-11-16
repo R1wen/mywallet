@@ -1,0 +1,51 @@
+{
+  "merchant": "Picard",
+  "merchantRaw": "PICARD SURGELES 0702",
+  "date": "2026-04-03",
+  "time": "18:09",
+  "currency": "EUR",
+  "totalCents": 2781,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 2636,
+      "vatCents": 145
+    }
+  ],
+  "items": [
+    {
+      "label": "LEGUMES GRILLES 600G",
+      "quantity": 1,
+      "unitPriceCents": 499,
+      "totalCents": 499
+    },
+    {
+      "label": "GLACE VANILLE 1L",
+      "quantity": 1,
+      "unitPriceCents": 549,
+      "totalCents": 549
+    },
+    {
+      "label": "CREVETTES CUITES",
+      "quantity": 1,
+      "unitPriceCents": 1095,
+      "totalCents": 1095
+    },
+    {
+      "label": "FRITES ALLUMETTES",
+      "quantity": 2,
+      "unitPriceCents": 319,
+      "totalCents": 638
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "low-contrast",
+    "noise",
+    "date-dot",
+    "time-h"
+  ]
+}

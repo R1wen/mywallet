@@ -1,0 +1,46 @@
+{
+  "merchant": "Boulangerie du Marché",
+  "merchantRaw": "BOULANGERIE DU MARCHE",
+  "date": "2026-11-02",
+  "time": "07:48",
+  "currency": "EUR",
+  "totalCents": 2045,
+  "paymentMethod": "cash",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 1938,
+      "vatCents": 107
+    }
+  ],
+  "items": [
+    {
+      "label": "BAGUETTE TRADITION",
+      "quantity": 2,
+      "unitPriceCents": 125,
+      "totalCents": 250
+    },
+    {
+      "label": "CROISSANT",
+      "quantity": 3,
+      "unitPriceCents": 115,
+      "totalCents": 345
+    },
+    {
+      "label": "TARTE AUX POMMES",
+      "quantity": 1,
+      "unitPriceCents": 1450,
+      "totalCents": 1450
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "clean",
+    "small",
+    "bakery",
+    "cash",
+    "date-short-year"
+  ]
+}

@@ -1,8 +1,9 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { PenLine, Plus, ReceiptText } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { DropdownMenu } from "radix-ui";
 import { useTransactionDialog } from "@/components/transactions/transaction-dialog";
 import { cn } from "@/lib/utils";
 import { isActive, isAvailable, NAV_ITEMS } from "./nav";
@@ -15,6 +16,7 @@ export function MobileTabbar() {
 /** `pathname` null = repli sans onglet actif (fallback de Suspense). */
 export function MobileTabbarView({ pathname }: { pathname: string | null }) {
   const { openNew } = useTransactionDialog();
+  const router = useRouter();
   const tabs = NAV_ITEMS.filter((i) => i.mobile);
   const left = tabs.slice(0, 2);
   const right = tabs.slice(2, 4);
@@ -56,15 +58,36 @@ export function MobileTabbarView({ pathname }: { pathname: string | null }) {
     >
       {left.map(renderTab)}
       <div className="flex flex-1 items-center justify-center">
-        <button
-          type="button"
-          // Saisie manuelle en attendant l'import de tickets (sprint 3).
-          aria-label="Ajouter une transaction"
-          onClick={openNew}
-          className="flex size-11 items-center justify-center rounded-md bg-accent text-bg active:bg-accent/80"
-        >
-          <Plus className="size-5" />
-        </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            aria-label="Ajouter un ticket ou une transaction"
+            className="flex size-11 items-center justify-center rounded-md bg-accent text-bg active:bg-accent/80"
+          >
+            <Plus className="size-5" />
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="top"
+              sideOffset={8}
+              className="z-50 min-w-56 rounded-md border border-border-strong bg-surface-2 p-1 data-[state=open]:animate-fade-in"
+            >
+              <DropdownMenu.Item
+                onSelect={() => router.push("/tickets")}
+                className="flex h-11 cursor-default items-center gap-2 rounded-sm px-2 text-base text-text outline-none select-none data-[highlighted]:bg-surface"
+              >
+                <ReceiptText className="size-4 text-muted" aria-hidden />
+                Ajouter un ticket
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={openNew}
+                className="flex h-11 cursor-default items-center gap-2 rounded-sm px-2 text-base text-text outline-none select-none data-[highlighted]:bg-surface"
+              >
+                <PenLine className="size-4 text-muted" aria-hidden />
+                Saisir une transaction
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
       {right.map(renderTab)}
     </nav>

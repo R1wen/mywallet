@@ -1,0 +1,60 @@
+{
+  "merchant": "Pharmacie Centrale",
+  "merchantRaw": "PHARMACIE CENTRALE",
+  "date": "2026-11-06",
+  "time": "16:03",
+  "currency": "EUR",
+  "totalCents": 2370,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 210,
+      "baseCents": 427,
+      "vatCents": 9
+    },
+    {
+      "rateBp": 1000,
+      "baseCents": 632,
+      "vatCents": 63
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 1033,
+      "vatCents": 206
+    }
+  ],
+  "items": [
+    {
+      "label": "PARACETAMOL 1G CPR",
+      "quantity": 2,
+      "unitPriceCents": 218,
+      "totalCents": 436
+    },
+    {
+      "label": "SIROP TOUX SECHE",
+      "quantity": 1,
+      "unitPriceCents": 695,
+      "totalCents": 695
+    },
+    {
+      "label": "SERUM PHYSIO X40",
+      "quantity": 1,
+      "unitPriceCents": 449,
+      "totalCents": 449
+    },
+    {
+      "label": "CREME MAINS 50ML",
+      "quantity": 1,
+      "unitPriceCents": 790,
+      "totalCents": 790
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "pharmacy",
+    "vat-2.1",
+    "clean"
+  ]
+}

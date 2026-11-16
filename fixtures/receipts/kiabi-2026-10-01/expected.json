@@ -1,0 +1,52 @@
+{
+  "merchant": "Kiabi",
+  "merchantRaw": "KIABI 0388",
+  "date": "2026-10-25",
+  "time": "14:52",
+  "currency": "EUR",
+  "totalCents": 6640,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 2000,
+      "baseCents": 5533,
+      "vatCents": 1107
+    }
+  ],
+  "items": [
+    {
+      "label": "JEAN SLIM BRUT T40",
+      "quantity": 1,
+      "unitPriceCents": 2500,
+      "totalCents": 2500
+    },
+    {
+      "label": "T-SHIRT COTON BIO",
+      "quantity": 3,
+      "unitPriceCents": 600,
+      "totalCents": 1800
+    },
+    {
+      "label": "PULL COL ROND",
+      "quantity": 1,
+      "unitPriceCents": 2200,
+      "totalCents": 2200
+    },
+    {
+      "label": "CHAUSSETTES X5",
+      "quantity": 1,
+      "unitPriceCents": 800,
+      "totalCents": 800
+    }
+  ],
+  "discountsCents": -660,
+  "returnDeadline": "2026-11-24",
+  "warrantyUntil": null,
+  "difficulty": [
+    "clothing",
+    "return",
+    "discount",
+    "a-payer",
+    "crop"
+  ]
+}

@@ -19,6 +19,7 @@ import {
   accounts,
   categories,
   merchants,
+  receipts,
   recurringOccurrences,
   transactions,
 } from "@/lib/db/schema";
@@ -495,6 +496,24 @@ export async function deleteTransaction(
             eq(recurringOccurrences.userId, userId),
             inArray(
               recurringOccurrences.transactionId,
+              tx.select({ id: transactions.id }).from(transactions).where(scope),
+            ),
+          ),
+        );
+      // Un ticket validé par ce mouvement repasse « à vérifier » (son fichier est conservé).
+      await tx
+        .update(receipts)
+        .set({
+          // Back to review, or to manual entry when nothing was read.
+          status: sql`case when ${receipts.extracted} is null then 'manual' else 'to_review' end`,
+          transactionId: null,
+          validatedAt: null,
+        })
+        .where(
+          and(
+            eq(receipts.userId, userId),
+            inArray(
+              receipts.transactionId,
               tx.select({ id: transactions.id }).from(transactions).where(scope),
             ),
           ),

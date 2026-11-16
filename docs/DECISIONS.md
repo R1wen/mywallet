@@ -41,10 +41,12 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 - Décision : les garder. La coquille (barre latérale, barre supérieure) est prérendue ; tout ce qui lit la session est sous `<Suspense>`.
 - Conséquences : lire `cookies()` hors `<Suspense>` casse le build ; les données utilisateur sont mises en cache par `userId` explicite ou non mises en cache.
 
-## ADR-008 — OCR dans le navigateur (à confirmer au spike du Sprint 3)
+## ADR-008 — OCR dans le navigateur (tranché au Sprint 3)
 
-- Décision provisoire : PaddleOCR (ONNX via onnxruntime-web) en principal, tesseract.js (fra+eng) en repli, exécutés côté client. Le benchmark du Sprint 3 tranche.
-- Conséquences : aucun coût serveur ; le fichier original est conservé, le résultat est revalidé côté serveur (Zod + validation déterministe) avant enregistrement.
+- Benchmark (`docs/OCR-BENCHMARK.md`, 18 fixtures synthétiques) : tesseract.js `fra+eng` lit mieux et plus vite que PaddleOCR PP-OCRv6 (CER 0,3 % contre 0,7 %, 1,2 s contre 7,3 s par ticket), pour 5 Mo téléchargés contre 34,5 Mo.
+- Décision : **tesseract.js 7 par défaut**, dans un Web Worker, fichiers servis depuis l'origine (`public/vendor`, copiés au `postinstall`). Les PDF avec couche texte sont lus par pdf.js, sans OCR. Chaîne de repli : règles → structureur choisi par l'utilisateur (Ollama local ou Gemini, ADR-029) → saisie manuelle à partir de l'image.
+- PaddleOCR (`ppu-paddle-ocr/web`) n'est pas livré au Sprint 3 : 31 Mo de modèles à auto-héberger (CSP `'self'`, ADR-031). À réévaluer avec le benchmark sur les vrais tickets ; si Paddle y gagne nettement, il devient le repli chargé à la demande.
+- Conséquences : aucun coût serveur ; le serveur ne reçoit que le texte brut et le reparse lui-même (Zod + validation déterministe) avant la revue humaine.
 
 ## ADR-009 — File de tâches PostgreSQL
 
@@ -138,3 +140,30 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 
 - Décision (validée) : une règle `transfer` (« Épargne ») porte un compte débité (`account_id`) et un compte crédité (`to_account_id`, migration additive 0002). Validée, elle crée un virement (deux jambes) : pas une dépense, le patrimoine total ne change pas, le reste à vivre baisse.
 - Les jambes d'un virement sont désormais mises à jour sur place lors d'une modification (identifiants stables : l'échéance pointe sur la jambe débitrice).
+
+## ADR-027 — Fichiers de tickets stockés dans PostgreSQL
+
+- Contexte : Vercel Hobby n'a pas de disque persistant ; Vercel Blob gratuit bloque le stockage 30 jours en cas de dépassement. Neon Free offre 1 Go par projet.
+- Décision (validée au Sprint 3) : les fichiers sont stockés dans une table dédiée (`receipt_files`, `bytea`, filtrée par `user_id`) derrière l'interface `StorageAdapter` (`put`, `get`, `delete`). Les photos sont normalisées et compressées dans le navigateur (JPEG, grand côté ≤ 2000 px, ~200 Ko) avant envoi ; une miniature est stockée à part. Les PDF sont gardés tels quels. Taille maximale 4 Mo par fichier (limite de 4,5 Mo des requêtes Vercel) ; les HEIC sont convertis en JPEG dans le navigateur.
+- Conséquences : environ 3 000 à 4 000 tickets tiennent dans le quota. Aucun nouveau service, isolation par la même règle que le reste. Un autre adaptateur (S3 compatible, disque en auto-hébergement) pourra remplacer celui-ci sans changer l'appelant.
+
+## ADR-028 — Rapprochement relevé bancaire et transactions
+
+- Décision (validée) : à l'import d'un relevé CSV, une ligne qui correspond à une transaction existante non rapprochée (même compte, montant exact, date à ±3 jours) est **liée** à cette transaction (elle devient « pointée »), rien n'est créé. Les lignes sans correspondance sont créées après aperçu et confirmation. Une ligne déjà importée (même empreinte date + montant + libellé normalisé + compte) est ignorée.
+- Un ticket validé plus tard est rapproché d'une ligne bancaire déjà importée de la même façon : il s'attache à la transaction existante au lieu d'en créer une seconde.
+- Conséquences : colonnes `bank_line_hash` et `reconciled_at` sur `transactions` ; préréglages de colonnes par utilisateur (`bank_import_presets`).
+
+## ADR-029 — Structuration des tickets : règles, Ollama, Gemini
+
+- Décision (validée) : interface `ReceiptStructurer` avec trois adaptateurs. `rules` (défaut) = parseur déterministe. `ollama` = modèle de vision local (Qwen-VL), sortie JSON contrainte par schéma, disponible seulement si `OLLAMA_URL` est configuré (local ou Docker). `gemini-free` = désactivé par défaut, activable par l'utilisateur dans Réglages après un avertissement (l'offre gratuite est limitée et Google peut utiliser les contenus), clé API fournie par l'utilisateur côté serveur.
+- Un modèle n'est appelé que si le parseur échoue ou si la confiance est faible. Sa sortie repasse par la validation Zod et la validation déterministe, puis par la revue humaine (règle 6).
+
+## ADR-030 — Fixtures publiques synthétiques
+
+- Décision (validée) : les fixtures commitées (`fixtures/receipts/`) sont des tickets français synthétiques réalistes rendus en images (bruit, rotation, papier thermique) et en PDF. Les vrais tickets de l'utilisateur restent dans `fixtures/receipts-private/` (ignoré par git) et ne servent qu'au benchmark local, dont seuls les agrégats sont publiés.
+
+## ADR-031 — Content Security Policy sans nonce
+
+- Contexte : une CSP à nonce oblige à rendre chaque page à la requête ; la doc Next 16 la déclare incompatible avec le prérendu partiel (Cache Components, ADR-007).
+- Décision : CSP fixe dans `next.config.ts` : tout limité à l'origine (`default-src`, `connect-src`, `img-src`, `worker-src` avec `blob:`), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`. `script-src` garde `'unsafe-inline'` (charge RSC en scripts en ligne) et ajoute `'wasm-unsafe-eval'` pour l'OCR WebAssembly, sans `eval()` JavaScript en production.
+- Conséquences : l'exfiltration vers un domaine tiers est bloquée (`connect-src`), mais un script injecté en ligne ne le serait pas : l'échappement React et l'absence de `dangerouslySetInnerHTML` restent la première défense. Les modèles OCR sont servis depuis l'origine (aucun CDN tiers).

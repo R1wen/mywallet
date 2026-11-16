@@ -21,7 +21,7 @@ export type NavItem = {
 };
 
 /** Sprint en cours : les entrées des sprints suivants sont affichées désactivées. */
-export const CURRENT_SPRINT = 2;
+export const CURRENT_SPRINT = 3;
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Tableau de bord", icon: LayoutDashboard, sprint: 0, mobile: true },

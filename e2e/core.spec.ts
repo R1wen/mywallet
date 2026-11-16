@@ -190,3 +190,74 @@ test.describe("récurrent : règles, échéances, reste à vivre", () => {
     await expect(rowWith(page, "Netflix")).toContainText("-10,49", { timeout: 60_000 });
   });
 });
+
+const RECEIPT_HTML = `<html><body style="margin:0;background:#fff">
+<pre style="font:16px/1.35 'Courier New',monospace;color:#111;padding:24px;width:380px">
+   BOULANGERIE MARIE
+
+BAGUETTE TRADITION       1,30
+   2 x 1,10              2,20
+CROISSANT
+
+TOTAL TTC                3,50 EUR
+CB SANS CONTACT          3,50
+
+10/11/2026  08:12
+</pre></body></html>`;
+
+test.describe("import : tickets et relevé", () => {
+  test("lit un ticket dans le navigateur puis le valide en dépense", async () => {
+    const render = await page.context().newPage();
+    await render.setContent(RECEIPT_HTML);
+    const buffer = await render.locator("pre").screenshot();
+    await render.close();
+
+    await page.goto("/tickets");
+    await expect(page.getByText("Aucun ticket pour l'instant.")).toBeVisible({ timeout: 60_000 });
+    // The input only reacts once hydrated: retry until the file shows up in the list.
+    await expect(async () => {
+      await page
+        .getByLabel("Choisir des tickets")
+        .setInputFiles({ name: "boulangerie.png", mimeType: "image/png", buffer });
+      await expect(page.locator("ul[aria-live] li").first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000 });
+    const open = page.getByRole("link", { name: "Ouvrir" }).first();
+    await expect(open).toBeVisible({ timeout: 120_000 });
+    await open.click();
+
+    await expect(page.getByLabel("Total payé")).toHaveValue("3,50", { timeout: 30_000 });
+    await expect(page.getByLabel("Date d'achat")).toHaveValue("2026-11-10");
+    await expect(page.getByLabel("Libellé de la ligne 1")).toHaveValue("BAGUETTE TRADITION");
+    await page.getByLabel("Magasin").fill("Boulangerie Marie");
+    await page.getByRole("button", { name: "Valider la dépense" }).click();
+    await expect(page.getByText("Dépense enregistrée.")).toBeVisible();
+    await page.waitForURL("**/tickets");
+    await expect(page.getByText("Traités récemment")).toBeVisible();
+
+    await page.goto("/transactions");
+    await expect(rowWith(page, "Boulangerie Marie")).toContainText("-3,50");
+  });
+
+  test("importe un relevé CSV : pointe la dépense du ticket, crée le reste", async () => {
+    const csv = [
+      "Date opération;Libellé;Débit;Crédit",
+      "11/11/2026;CB BOULANGERIE MARIE 10/11;3,50;",
+      "12/11/2026;VIR SALAIRE ACME;;2 100,00",
+    ].join("\r\n");
+    await page.goto("/transactions/import");
+    await expect(async () => {
+      await page.getByLabel("Fichier CSV du relevé").setInputFiles({
+        name: "releve.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from(csv, "utf8"),
+      });
+      await expect(page.getByText("releve.csv")).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+    await expect(rowWith(page, "CB BOULANGERIE MARIE")).toContainText("Déjà saisi");
+    await expect(rowWith(page, "VIR SALAIRE ACME")).toContainText("Nouveau");
+    await page.getByRole("button", { name: "Importer" }).click();
+    await expect(page.getByText("1 créé, 1 pointé, 0 ignoré.")).toBeVisible();
+    await page.waitForURL("**/transactions");
+    await expect(rowWith(page, "SALAIRE ACME")).toContainText("+2 100,00");
+  });
+});

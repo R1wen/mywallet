@@ -1,0 +1,69 @@
+{
+  "merchant": "Auchan",
+  "merchantRaw": "AUCHAN SUPERMARCHE 0915",
+  "date": "2026-05-16",
+  "time": "12:20",
+  "currency": "EUR",
+  "totalCents": 2033,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 744,
+      "vatCents": 41
+    },
+    {
+      "rateBp": 1000,
+      "baseCents": 681,
+      "vatCents": 68
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 416,
+      "vatCents": 83
+    }
+  ],
+  "items": [
+    {
+      "label": "MOZZARELLA 125G",
+      "quantity": 3,
+      "unitPriceCents": 89,
+      "totalCents": 267
+    },
+    {
+      "label": "PIZZA JAMBON",
+      "quantity": 1,
+      "unitPriceCents": 329,
+      "totalCents": 329
+    },
+    {
+      "label": "SODA COLA 1,5L",
+      "quantity": 1,
+      "unitPriceCents": 189,
+      "totalCents": 189
+    },
+    {
+      "label": "ARROSOIR 10L",
+      "quantity": 1,
+      "unitPriceCents": 599,
+      "totalCents": 599
+    },
+    {
+      "label": "TERREAU 40L",
+      "quantity": 1,
+      "unitPriceCents": 749,
+      "totalCents": 749
+    }
+  ],
+  "discountsCents": -100,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "photo",
+    "blur",
+    "rotated",
+    "supermarket",
+    "a-payer",
+    "date-short-year"
+  ]
+}

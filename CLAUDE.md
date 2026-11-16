@@ -35,6 +35,8 @@ pnpm test:int            # intégration, nécessite Postgres (docker compose up 
 pnpm e2e                 # Playwright (en local, plus fiable sur un build : pnpm build puis E2E_START_COMMAND="pnpm start")
 pnpm db:generate | db:migrate | db:seed
 pnpm screens <sprint> <routes...>   # captures 1440/390 -> docs/screens/sprint-N
+pnpm ocr:bench [--dir fixtures/receipts-private]   # benchmark OCR (docs/OCR-BENCHMARK.md)
+pnpm fixtures:receipts               # régénère les tickets synthétiques (fixtures/receipts)
 ```
 
 ## Structure
@@ -44,6 +46,7 @@ pnpm screens <sprint> <routes...>   # captures 1440/390 -> docs/screens/sprint-N
 - `src/lib/actions/` — server actions (`requireUser` + Zod + `refresh()`). `src/lib/validation/` — schémas Zod partagés formulaire/serveur. `src/lib/catalog/` — catégories et enseignes FR par défaut.
 - `src/lib/auth/` — Better Auth (serveur + client) et `requireUser()`.
 - `src/components/ui/` — primitives. `src/components/shell/` — coquille (sidebar, topbar, ⌘K). `src/components/transactions/` — saisie rapide globale (`useTransactionDialog`).
+- Import (Sprint 3) : `src/lib/ocr/` (client : préparation image/PDF, tesseract.js, assets servis depuis `public/vendor` copiés au `postinstall`), `src/lib/domain/receipts/` (parseur + validation), `src/lib/domain/bank-csv.ts`, `src/lib/server/{receipts,bank-import,storage,structurers}.ts`. Le serveur ne reçoit que le texte OCR brut et le reparse. Fixtures publiques synthétiques dans `fixtures/receipts/`, vrais tickets dans `fixtures/receipts-private/` (ignoré).
 - `src/app/(app)/` — écrans connectés. `src/app/(auth)/` — connexion, inscription. `src/app/design/` — vitrine dev.
 - `tests/integration/`, `e2e/`, `scripts/`, `docs/`.
 
@@ -79,7 +82,7 @@ pnpm screens <sprint> <routes...>   # captures 1440/390 -> docs/screens/sprint-N
 ## Conventions
 
 - Un sprint = une branche `sprint/N-nom`, commits conventionnels atomiques, une PR via `gh`, CI verte.
-- Écrire les fichiers de code avec l'outil Write/Edit, pas avec des heredocs shell (les `\` sont altérés).
+- Écrire les fichiers de code avec l'outil Write/Edit, pas avec des heredocs shell (les `\` sont altérés, y compris dans un script python passé en heredoc : `\b` devient un caractère de contrôle).
 - Composants serveur par défaut ; `"use client"` seulement si nécessaire.
 - Fin de sprint : tests, CI, captures, `ui-reviewer`, `/code-review`, ROADMAP, récap, STOP.
 

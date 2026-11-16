@@ -8,6 +8,11 @@ const serverSchema = z
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
     VERCEL_URL: z.string().min(1).optional(),
+    // Optional receipt structurers (ADR-029). Unset = option unavailable.
+    OLLAMA_URL: z.string().url().optional(),
+    OLLAMA_MODEL: z.string().min(1).default("qwen2.5vl:7b"),
+    GEMINI_API_KEY: z.string().min(20).optional(),
+    GEMINI_MODEL: z.string().min(1).default("gemini-flash-latest"),
   })
   .superRefine((env, ctx) => {
     // En production Vercel, l'URL publique doit être fournie explicitement et en HTTPS :

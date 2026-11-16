@@ -1,0 +1,28 @@
+  LE BISTROT DES HALLES
+            Restaurant - Bar
+           21 RUE DES HALLES
+              75001 PARIS
+        SIRET 000 000 754 00028
+
+17/10/2026 21h15                TABLE 12
+----------------------------------------
+2 MENU DU JOUR                     33,00
+ENTRECOTE FRITES                   22,00
+2 CAFE GOURMAND                    15,80
+CARAFE VIN ROUGE 50CL              16,00
+EAU PETILLANTE 1L                   5,50
+----------------------------------------
+NB ARTICLES : 7
+NET A PAYER      92,30 EUR
+
+CB                                 92,30
+CARTE BANCAIRE SANS CONTACT
+XXXX XXXX XXXX 6627
+A0000000421010  CB
+
+TAUX              HT       TVA       TTC
+10,00%         69,36      6,94     76,30
+20,00%         13,33      2,67     16,00
+
+            Service compris
+         Merci de votre visite

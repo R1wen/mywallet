@@ -7,3 +7,5 @@ drizzle/meta
 pnpm-lock.yaml
 docs/screens
 public
+.claude/worktrees
+fixtures

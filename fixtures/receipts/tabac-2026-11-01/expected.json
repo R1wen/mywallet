@@ -1,0 +1,57 @@
+{
+  "merchant": "Tabac Presse Le Balto",
+  "merchantRaw": "TABAC PRESSE LE BALTO",
+  "date": "2026-11-12",
+  "time": "18:42",
+  "currency": "EUR",
+  "totalCents": 900,
+  "paymentMethod": "cash",
+  "vat": [
+    {
+      "rateBp": 210,
+      "baseCents": 372,
+      "vatCents": 8
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 433,
+      "vatCents": 87
+    }
+  ],
+  "items": [
+    {
+      "label": "LE QUOTIDIEN DU JOUR",
+      "quantity": 1,
+      "unitPriceCents": 230,
+      "totalCents": 230
+    },
+    {
+      "label": "MAGAZINE TELE",
+      "quantity": 1,
+      "unitPriceCents": 150,
+      "totalCents": 150
+    },
+    {
+      "label": "BRIQUET",
+      "quantity": 1,
+      "unitPriceCents": 200,
+      "totalCents": 200
+    },
+    {
+      "label": "CHEWING GUM MENTHE",
+      "quantity": 2,
+      "unitPriceCents": 160,
+      "totalCents": 320
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "press",
+    "vat-2.1",
+    "cash",
+    "time-h",
+    "small"
+  ]
+}

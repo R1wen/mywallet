@@ -49,3 +49,5 @@ next-env.d.ts
 # app data
 /storage
 /fixtures/receipts-private/
+/.claude/worktrees/
+/public/vendor/
