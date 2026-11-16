@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchByAmountAndDate } from "./reconcile";
+import { matchByAmountAndDate, reconcileWindow } from "./reconcile";
 
 const line = (date: string, amountCents: number) => ({ date, amountCents });
 
@@ -51,5 +51,14 @@ describe("matchByAmountAndDate", () => {
         [{ id: "a", date: "2026-11-05", amountCents: -250 }],
       ),
     ).toEqual([null]);
+  });
+});
+
+describe("reconcileWindow", () => {
+  it("widens the statement period by 3 days on each side", () => {
+    expect(reconcileWindow("2026-11-01", "2026-11-30")).toEqual({
+      from: "2026-10-29",
+      to: "2026-12-03",
+    });
   });
 });

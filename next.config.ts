@@ -37,6 +37,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // agentFeedback disabled on purpose: see docs/DECISIONS.md (ADR-011).
   cacheComponents: true,
+  experimental: {
+    // Receipt uploads: 4 MB file + thumbnail + multipart overhead (src/lib/domain/files.ts).
+    serverActions: { bodySizeLimit: "4.4mb" },
+  },
   partialPrefetching: true,
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,

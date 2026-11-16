@@ -2,7 +2,7 @@
  * Matching of bank lines (or a validated receipt) with existing transactions (ADR-028):
  * same signed amount, dates at most 3 days apart. Pure and deterministic.
  */
-import { daysBetweenInclusive } from "./recurrence";
+import { addDaysIso, daysBetweenInclusive } from "./recurrence";
 import { MATCH_WINDOW_DAYS } from "./receipts/validate";
 
 export type Matchable = { date: string; amountCents: number };
@@ -39,4 +39,13 @@ export function matchByAmountAndDate(
     used.add(p.cand);
   }
   return result;
+}
+
+/** Dates of candidate movements for lines dated between `first` and `last`. */
+export function reconcileWindow(
+  first: string,
+  last: string,
+  windowDays = MATCH_WINDOW_DAYS,
+): { from: string; to: string } {
+  return { from: addDaysIso(first, -windowDays), to: addDaysIso(last, windowDays) };
 }

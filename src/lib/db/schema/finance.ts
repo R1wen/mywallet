@@ -26,6 +26,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { bytea, cents, currency, id, inList, ownerId, timestamps } from "./columns";
@@ -284,10 +285,20 @@ export const transactions = pgTable(
     categoryId: uuid(),
     recurringRuleId: uuid(),
     transferGroupId: uuid(),
+    /**
+     * SHA-256 of the bank statement line this movement was imported from or reconciled
+     * with (ADR-028). Not null = "pointée". Prevents importing the same line twice.
+     */
+    bankLineKey: text(),
+    /** Raw label of that bank line, kept for display and search. */
+    bankLabel: text(),
     ...timestamps,
   },
   (t) => [
     unique("transactions_user_id_id_key").on(t.userId, t.id),
+    uniqueIndex("transactions_user_bank_line_key")
+      .on(t.userId, t.bankLineKey)
+      .where(sql`${t.bankLineKey} is not null`),
     // Target of claim_payments' FK that pins the linked transaction to kind = 'reimbursement'.
     unique("transactions_user_id_id_kind_key").on(t.userId, t.id, t.kind),
     // Main list (newest first) and per-account list / balance.
@@ -334,6 +345,10 @@ export const transactions = pgTable(
       sql`(${t.kind} = 'transfer') = (${t.transferGroupId} is not null)`,
     ),
     check("transactions_label_check", sql`btrim(${t.label}) <> ''`),
+    check(
+      "transactions_bank_line_key_check",
+      sql`${t.bankLineKey} is null or ${t.bankLineKey} ~ '^[0-9a-f]{64}$'`,
+    ),
   ],
 );
 

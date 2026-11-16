@@ -15,15 +15,17 @@ export type UploadType = (typeof UPLOAD_TYPES)[number];
 const MB = 1024 * 1024;
 
 /**
- * Photos are normally resized and re-encoded in the browser before upload (ADR-027),
- * so these limits only bound what reaches the server when that step is skipped.
+ * Photos are resized and re-encoded in the browser before upload (ADR-027), so a few
+ * hundred KB is typical. 4 MB keeps original + thumbnail under the 4.5 MB request body
+ * limit of Vercel functions.
  */
+export const MAX_UPLOAD_MB = 4;
 export const MAX_UPLOAD_BYTES: Record<UploadType, number> = {
-  "image/jpeg": 8 * MB,
-  "image/png": 8 * MB,
-  "image/webp": 8 * MB,
-  "image/heic": 12 * MB,
-  "application/pdf": 8 * MB,
+  "image/jpeg": MAX_UPLOAD_MB * MB,
+  "image/png": MAX_UPLOAD_MB * MB,
+  "image/webp": MAX_UPLOAD_MB * MB,
+  "image/heic": MAX_UPLOAD_MB * MB,
+  "application/pdf": MAX_UPLOAD_MB * MB,
 };
 
 export const UPLOAD_EXTENSIONS: Record<UploadType, string> = {

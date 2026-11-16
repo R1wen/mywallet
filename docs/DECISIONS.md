@@ -142,7 +142,7 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-027 — Fichiers de tickets stockés dans PostgreSQL
 
 - Contexte : Vercel Hobby n'a pas de disque persistant ; Vercel Blob gratuit bloque le stockage 30 jours en cas de dépassement. Neon Free offre 1 Go par projet.
-- Décision (validée au Sprint 3) : les fichiers sont stockés dans une table dédiée (`receipt_files`, `bytea`, filtrée par `user_id`) derrière l'interface `StorageAdapter` (`put`, `get`, `delete`). Les photos sont normalisées et compressées dans le navigateur (JPEG, grand côté ≤ 2000 px, ~200 Ko) avant envoi ; une miniature est stockée à part. Les PDF sont gardés tels quels (taille maximale 8 Mo).
+- Décision (validée au Sprint 3) : les fichiers sont stockés dans une table dédiée (`receipt_files`, `bytea`, filtrée par `user_id`) derrière l'interface `StorageAdapter` (`put`, `get`, `delete`). Les photos sont normalisées et compressées dans le navigateur (JPEG, grand côté ≤ 2000 px, ~200 Ko) avant envoi ; une miniature est stockée à part. Les PDF sont gardés tels quels. Taille maximale 4 Mo par fichier (limite de 4,5 Mo des requêtes Vercel) ; les HEIC sont convertis en JPEG dans le navigateur.
 - Conséquences : environ 3 000 à 4 000 tickets tiennent dans le quota. Aucun nouveau service, isolation par la même règle que le reste. Un autre adaptateur (S3 compatible, disque en auto-hébergement) pourra remplacer celui-ci sans changer l'appelant.
 
 ## ADR-028 — Rapprochement relevé bancaire et transactions

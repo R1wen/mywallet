@@ -34,11 +34,11 @@ describe("checkUpload", () => {
     [{ type: "image/jpeg" as const, size: 0 }, "Fichier vide."],
     [
       { type: "application/pdf" as const, size: MAX_UPLOAD_BYTES["application/pdf"] + 1 },
-      "Fichier trop volumineux (8 Mo maximum).",
+      "Fichier trop volumineux (4 Mo maximum).",
     ],
     [
       { type: "image/heic" as const, size: MAX_UPLOAD_BYTES["image/heic"] + 1 },
-      "Fichier trop volumineux (12 Mo maximum).",
+      "Fichier trop volumineux (4 Mo maximum).",
     ],
   ])("%j -> %s", (input, message) => {
     expect(checkUpload(input)).toBe(message);
