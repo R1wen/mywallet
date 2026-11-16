@@ -69,8 +69,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
 - [x] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV, réglages
 - [x] Structureurs Ollama et Gemini (désactivés sans configuration, Gemini avec consentement)
-- [x] Tests : 509 unitaires, 83 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
-- [~] Captures, `ui-reviewer`, `security-reviewer`, `/code-review`
+- [x] Tests : 557 unitaires (dont non-régression du parseur sur les 18 fixtures et entrées hostiles), 90 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
+- [x] Captures (`docs/screens/sprint-3/`), `ui-reviewer` (2 passes), `security-reviewer` (ReDoS du parseur, appels de modèle, quotas, garde de rattachement : corrigés), `/code-review` (9 corrections)
+- [ ] Import CSV : un virement reçu qui rembourse une créance est créé en revenu (lien avec les créances au Sprint 4)
 - [ ] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 
