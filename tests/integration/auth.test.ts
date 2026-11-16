@@ -54,12 +54,31 @@ describe("auth (Better Auth + Drizzle)", () => {
     expect(res.status).toBe(401);
   });
 
+  /** Requête HTTP réelle sur le handler (comme le navigateur), avec l'origine de confiance. */
+  async function postSignUp(body: Record<string, string>) {
+    const res = await auth.handler(
+      new Request("http://localhost:3000/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3000" },
+        body: JSON.stringify(body),
+      }),
+    );
+    return { status: res.status, message: ((await res.json()) as { message?: string }).message };
+  }
+
   it("rejects a password shorter than 10 characters", async () => {
-    const res = await auth.api.signUpEmail({
-      body: { name: "X", email: `short-${email}`, password: "court" },
-      asResponse: true,
-    });
-    expect(res.status).toBe(400);
+    const r = await postSignUp({ name: "X", email: `short-${email}`, password: "court" });
+    expect(r).toEqual({ status: 400, message: "10 caractères minimum." });
+  });
+
+  it("validates sign-up input server-side with the same Zod schema", async () => {
+    for (const [name, message] of [
+      ["   ", "Saisissez votre prénom."],
+      ["x".repeat(81), "80 caractères maximum."],
+    ] as const) {
+      const r = await postSignUp({ name, email: `zod-${randomUUID()}@test.local`, password });
+      expect(r).toEqual({ status: 400, message });
+    }
   });
 
   it("sign-out deletes the session server-side", async () => {

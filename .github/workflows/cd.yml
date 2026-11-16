@@ -119,9 +119,13 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Health check
         if: steps.guard.outputs.ready == 'true'
+        env:
+          # Domaine public de production (variable GitHub PRODUCTION_URL) : l'URL brute du
+          # déploiement est protégée par la « Deployment Protection » de Vercel (401).
+          TARGET_URL: ${{ vars.PRODUCTION_URL || steps.deploy.outputs.url }}
         run: |
           for i in $(seq 1 20); do
-            body=$(curl -fsS "${{ steps.deploy.outputs.url }}/api/health" || true)
+            body=$(curl -fsS "$TARGET_URL/api/health" || true)
             echo "$body" | grep -q '"status":"ok"' && { echo "Healthy: $body"; exit 0; }
             sleep 6
           done

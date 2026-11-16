@@ -14,6 +14,7 @@ Le déploiement est automatique : à chaque push sur `main`, la CI tourne ; si e
 5. Secrets GitHub (Settings > Secrets and variables > Actions), dans l'environnement `production` :
    - `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
    - `PRODUCTION_DATABASE_URL` (même chaîne Neon, utilisée pour les migrations)
+   - Variable (onglet Variables) `PRODUCTION_URL` = domaine public de production, pour la vérification de santé (l'URL brute d'un déploiement est protégée par Vercel et répond 401)
 6. Environnement GitHub `production` (Settings > Environments) : restreindre aux branches `main`, ajouter vous-même comme reviewer requis si vous voulez valider chaque mise en production.
 
 Tant que ces secrets manquent, le job de déploiement s'arrête avec un avertissement (l'image Docker est quand même publiée sur GHCR).

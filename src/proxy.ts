@@ -17,9 +17,8 @@ export function proxy(request: NextRequest) {
     if (pathname !== "/") url.searchParams.set("suite", `${pathname}${search}`);
     return NextResponse.redirect(url);
   }
-  if (hasSession && isPublic) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // Pas de redirection /connexion -> / sur simple présence du cookie : un cookie expiré
+  // ou révoqué provoquerait une boucle avec requireUser() (qui renvoie vers /connexion).
   return NextResponse.next();
 }
 

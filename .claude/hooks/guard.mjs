@@ -18,7 +18,8 @@ const ALLOWED_RM_TARGETS = new Set([
 ]);
 
 // `.env`, `.env.local`, `.env.production`… but not `.env.example`.
-const ENV_FILE = /(^|[\s"'`=/\\:(])\.env(?!\.example\b)(\.[\w.-]+)?(?=$|[\s"'`/\\);|&>])/;
+// Le lookahead inclut les jokers (`.env*`, `.env?`, `.env[…]`, `.env{…}`).
+const ENV_FILE = /(^|[\s"'`=/\\:(])\.env(?!\.example\b)(\.[\w.-]+)?(?=$|[\s"'`/\\);|&>*?[{])/;
 const SECRET_FILE =
   /(^|[\s"'`=/\\])(id_rsa|id_ed25519|[\w.-]+\.pem|[\w.-]+\.key|credentials\.json|\.credentials\.json|\.npmrc|\.netrc)(?=$|[\s"'`;|&>])/i;
 
@@ -82,8 +83,10 @@ if (tool === "Bash" || tool === "PowerShell") {
     deny(`Accès à ${p} bloqué par le hook du projet (.env et fichiers de secrets).`);
   }
 } else if (tool === "Grep" || tool === "Glob") {
-  const p = String(ti.path ?? "") + " " + String(ti.glob ?? ti.pattern ?? "");
-  if (/\.env(?!\.example)/.test(p) && tool === "Glob") {
+  // Grep : on regarde le chemin et le filtre de fichiers (pas le motif de recherche, qui est du texte).
+  const targets = tool === "Grep" ? [ti.path, ti.glob] : [ti.path, ti.pattern];
+  const p = targets.map((t) => String(t ?? "")).join(" ");
+  if (/\.env(?!\.example\b)/.test(p) || isSecretPath(String(ti.path ?? ""))) {
     deny("Recherche ciblant des fichiers .env bloquée par le hook du projet.");
   }
 }

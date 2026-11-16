@@ -7,6 +7,7 @@ const serverSchema = z
     BETTER_AUTH_URL: z.string().url().optional(),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
+    VERCEL_URL: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     // En production Vercel, l'URL publique doit être fournie explicitement et en HTTPS :
@@ -21,7 +22,11 @@ const serverSchema = z
   })
   .transform((env) => ({
     ...env,
-    BETTER_AUTH_URL: env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    // Prévisualisations Vercel : URL du déploiement si rien n'est fourni,
+    // sinon l'origine du navigateur serait refusée par la vérification CSRF.
+    BETTER_AUTH_URL:
+      env.BETTER_AUTH_URL ??
+      (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : "http://localhost:3000"),
   }));
 
 export type ServerEnv = z.infer<typeof serverSchema>;

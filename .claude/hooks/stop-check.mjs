@@ -7,13 +7,18 @@ import { pnpm, projectDir, readStdin, tail } from "./lib.mjs";
 const input = await readStdin();
 if (input.stop_hook_active) process.exit(0);
 
-const status = spawnSync("git", ["status", "--porcelain"], { cwd: projectDir(), encoding: "utf8" });
+// --untracked-files=all : un nouveau dossier apparaît sinon comme `?? dir/` sans ses fichiers.
+const status = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+  cwd: projectDir(),
+  encoding: "utf8",
+});
 const changedTs = (status.stdout ?? "")
   .split(/\r?\n/)
   .some((l) => /\.(ts|tsx)"?$/.test(l.trim()) && !/\.claude\//.test(l));
 if (!changedTs) process.exit(0);
 
-const tsc = pnpm(["exec", "tsc", "--noEmit"], { timeoutMs: 180_000 });
+// `pnpm typecheck` = next typegen + tsc (types globaux LayoutProps/PageProps).
+const tsc = pnpm(["typecheck"], { timeoutMs: 240_000 });
 if (!tsc.ok) {
   process.stderr.write(
     `Typecheck en échec, corriger avant de terminer :\n${tail(tsc.output, 30)}\n`,

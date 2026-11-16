@@ -48,6 +48,8 @@ export function authErrorMessage(error: {
     case "INVALID_EMAIL":
       return "Adresse e-mail invalide.";
     default:
+      // 400 sans code : rejet par nos schémas Zod côté serveur, message déjà en français.
+      if (error.status === 400 && !error.code && error.message) return error.message;
       return "Une erreur est survenue. Réessayez.";
   }
 }

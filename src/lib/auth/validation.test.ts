@@ -45,6 +45,8 @@ describe("authErrorMessage", () => {
     [{ code: "INVALID_EMAIL_OR_PASSWORD" }, "E-mail ou mot de passe incorrect."],
     [{ code: "USER_ALREADY_EXISTS" }, "Un compte existe déjà avec cet e-mail."],
     [{ code: "SOMETHING_ELSE" }, "Une erreur est survenue. Réessayez."],
+    [{ status: 400, message: "80 caractères maximum." }, "80 caractères maximum."],
+    [{ status: 500, message: "stack trace" }, "Une erreur est survenue. Réessayez."],
   ])("%j", (err, expected) => {
     expect(authErrorMessage(err)).toBe(expected);
   });

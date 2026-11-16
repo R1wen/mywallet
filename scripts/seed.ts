@@ -977,6 +977,17 @@ async function main(): Promise<void> {
     console.error("Refusé : le seed de démonstration ne s'exécute pas en production.");
     process.exit(1);
   }
+  // Le compte de démo a un mot de passe public : jamais sur une base distante (Neon…)
+  // sauf consentement explicite.
+  const host = new URL(url).hostname;
+  const isLocal = ["localhost", "127.0.0.1", "::1", "db"].includes(host);
+  if (!isLocal && process.env.ALLOW_REMOTE_SEED !== "1") {
+    console.error(
+      `Refusé : base distante (${host}). Le seed crée un compte au mot de passe public. ` +
+        "Définir ALLOW_REMOTE_SEED=1 pour forcer (base de démonstration uniquement).",
+    );
+    process.exit(1);
+  }
 
   const pool = new Pool({ connectionString: url, max: 1 });
   const db = drizzle(pool, { schema, casing: "snake_case" });

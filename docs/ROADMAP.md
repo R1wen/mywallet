@@ -20,11 +20,19 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Domaine : argent (centimes, format FR, répartition), dates Europe/Paris, marchands (TDD)
 - [x] Charte Graphite : tokens, polices, composants de base, page `/design`
 - [x] Coquille : barre latérale repliable, barre supérieure, palette ⌘K, barre d'onglets mobile
-- [~] Mémoire projet : `CLAUDE.md`, ROADMAP, ADR, skills, agents, hooks, MCP
-- [ ] Schéma Drizzle complet, migrations, file de tâches PG, seed FR
-- [ ] Auth Better Auth (inscription, connexion, déconnexion, sessions, rate limit)
-- [ ] Tests d'intégration (isolation A/B), e2e Playwright
-- [ ] Docker, `/api/health`
-- [ ] CI, CD (Vercel + Neon), Dependabot, CodeQL, gitleaks
-- [ ] Captures, `ui-reviewer`, `security-reviewer`, `/code-review`
-- [ ] Vérifier : CI verte, récapitulatif, STOP
+- [x] Mémoire projet : `CLAUDE.md`, ROADMAP, ADR, skills, agents, hooks, MCP
+- [x] Schéma Drizzle complet (19 tables), migration, file de tâches PG, seed FR
+- [x] Auth Better Auth (inscription, connexion, déconnexion, sessions, rate limit)
+- [x] Tests d'intégration (isolation A/B base + repository, auth), e2e Playwright (8)
+- [x] Docker (image testée), `/api/health`
+- [x] CI, CD (Vercel + Neon), Dependabot, CodeQL, gitleaks
+- [x] Captures, `ui-reviewer` (corrections appliquées), `security-reviewer` (faille CD corrigée)
+- [~] `/code-review`, PR, CI verte sur GitHub
+- [ ] Vérifier : récapitulatif, STOP
+
+### Reporté (décidé au Sprint 0)
+
+- CSP avec nonce dans `proxy.ts` : avant le Sprint 3 (imports de fichiers, logos externes).
+- Docker derrière un proxy : configurer `advanced.ipAddress` de Better Auth (IP de confiance) avant tout auto-hébergement exposé.
+- Avoirs marchands (remboursement d'un achat) : modèle à décider au Sprint 1 (ADR-017).
+- Évals des skills projet (skill-creator) : à lancer quand les skills auront servi sur un sprint.

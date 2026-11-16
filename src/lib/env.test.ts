@@ -14,6 +14,13 @@ describe("parseServerEnv", () => {
     );
   });
 
+  it("uses the deployment URL on Vercel previews when BETTER_AUTH_URL is not set", () => {
+    expect(
+      parseServerEnv({ ...base, VERCEL_ENV: "preview", VERCEL_URL: "mw-abc.vercel.app" })
+        .BETTER_AUTH_URL,
+    ).toBe("https://mw-abc.vercel.app");
+  });
+
   it("requires an https BETTER_AUTH_URL in Vercel production", () => {
     expect(() => parseServerEnv({ ...base, VERCEL_ENV: "production" })).toThrow(/BETTER_AUTH_URL/);
     expect(() =>
