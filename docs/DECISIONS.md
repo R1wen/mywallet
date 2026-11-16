@@ -120,3 +120,21 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-023 — Provisionnement à l'inscription
 
 - Décision : à la création d'un utilisateur (hook Better Auth `databaseHooks.user.create.after`), insertion des catégories par défaut, du catalogue d'enseignes françaises et d'un compte courant. Catalogue partagé avec le seed dans `src/lib/catalog/`.
+
+## ADR-024 — Échéances récurrentes : prévues puis validées
+
+- Décision (validée au Sprint 2) : une règle récurrente génère des **échéances** (`recurring_occurrences`) au statut `planned`. Une échéance prévue apparaît au calendrier et compte dans le reste à vivre, jamais dans un solde. La valider crée la vraie transaction (montant, date et compte ajustables) et la relie (`confirmed`) ; l'ignorer la passe en `skipped`. Supprimer la transaction ou annuler la validation la remet en `planned`.
+- Idempotence : curseur `next_run_on` sur la règle (lignes verrouillées `FOR UPDATE`) et contrainte unique `(user_id, rule_id, due_on)` avec `ON CONFLICT DO NOTHING`. Génération paresseuse à l'affichage (tableau de bord, Récurrent), jusqu'à la fin du mois affiché, au plus 12 mois à l'avance ; aucune tâche planifiée nécessaire.
+- Première échéance : la première date à partir d'aujourd'hui. Les dates passées ne sont pas générées (elles ont le plus souvent déjà été saisies à la main ; les générer les compterait deux fois).
+- Modifier une règle régénère ses échéances prévues à venir ; les échéances validées, ignorées ou en retard sont conservées. Supprimer une règle supprime ses échéances, les transactions déjà validées restent (lien vers la règle retiré).
+- Dates : jours 29 à 31 ramenés au dernier jour des mois courts, 29 février annuel ramené au 28 les années non bissextiles, pas de report au jour ouvré.
+
+## ADR-025 — Reste à vivre
+
+- Décision (validée) : reste à vivre = solde des comptes courants et espèces (hors épargne, carte de crédit et autres, hors comptes archivés) + effet des échéances du mois encore prévues (charges et épargne en moins, revenus en plus, échéances en retard comprises). Utilisable aujourd'hui = reste à vivre ÷ jours restants (aujourd'hui inclus), arrondi au centime inférieur, jamais négatif.
+- Un virement prévu ne compte que pour la part qui touche un compte disponible (épargne : en moins ; entre deux comptes disponibles : neutre).
+
+## ADR-026 — Épargne récurrente = virement
+
+- Décision (validée) : une règle `transfer` (« Épargne ») porte un compte débité (`account_id`) et un compte crédité (`to_account_id`, migration additive 0002). Validée, elle crée un virement (deux jambes) : pas une dépense, le patrimoine total ne change pas, le reste à vivre baisse.
+- Les jambes d'un virement sont désormais mises à jour sur place lors d'une modification (identifiants stables : l'échéance pointe sur la jambe débitrice).
