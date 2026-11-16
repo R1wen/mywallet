@@ -50,3 +50,4 @@ next-env.d.ts
 /storage
 /fixtures/receipts-private/
 /.claude/worktrees/
+/public/vendor/

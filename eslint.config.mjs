@@ -29,6 +29,7 @@ const eslintConfig = defineConfig([
     "test-results/**",
     "drizzle/**",
     ".claude/worktrees/**",
+    "public/vendor/**",
   ]),
 ]);
 
