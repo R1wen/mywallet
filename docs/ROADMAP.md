@@ -1,4 +1,4 @@
-﻿# Roadmap myWallet
+# Roadmap myWallet
 
 Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI verte)
 
@@ -6,8 +6,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | ------ | ---------------------------------------------------------------------------- | --------------------- | ------------ |
 | 0      | Fondations                                                                   | `sprint/0-fondations` | [x]          |
 | 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [x]          |
-| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [~] en cours |
-| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [ ]          |
+| 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [x]          |
+| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [~] en cours |
 | 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [ ]          |
 | 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [ ]          |
 | 6      | Analyses                                                                     | `sprint/6-analyses`   | [ ]          |
@@ -55,6 +55,21 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Captures (`docs/screens/sprint-2/`), `ui-reviewer` (corrections : cibles tactiles 44 px des boutons, prochaine échéance réelle, signe des revenus validés, mise en page mobile)
 - [x] `/code-review` (10 corrections : jambe débitrice stable d'un virement, replanification sans doublon dans un mois validé, échéances en retard suivant le type de la règle, libellé d'épargne, requêtes en double)
 - [x] PR #4, CI verte
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #4 par l'utilisateur)
+
+## Sprint 3 : Import intelligent
+
+- [x] Décisions validées : fichiers dans PostgreSQL, rapprochement sans doublon, structuration règles + Ollama + Gemini, fixtures synthétiques (ADR-027 à 030)
+- [ ] CSP avec nonce (reporté du Sprint 0)
+- [ ] Domaine (TDD) : signature des fichiers, parseur de tickets FR, validation déterministe et confiance, doublons, CSV bancaire, rapprochement
+- [ ] Fixtures : 15+ tickets synthétiques avec résultats attendus
+- [ ] Spike OCR (`ocr-benchmarker`) : PaddleOCR ONNX vs Tesseract, `docs/OCR-BENCHMARK.md` (vrais tickets dans `fixtures/receipts-private/`)
+- [ ] Schéma : fichiers, rapprochement, préréglages CSV (migration 0003)
+- [ ] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
+- [ ] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV
+- [ ] Structureurs Ollama et Gemini (désactivé par défaut)
+- [ ] Tests, captures, `ui-reviewer`, `security-reviewer`, `/code-review`
+- [ ] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)

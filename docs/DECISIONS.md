@@ -138,3 +138,24 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 
 - Décision (validée) : une règle `transfer` (« Épargne ») porte un compte débité (`account_id`) et un compte crédité (`to_account_id`, migration additive 0002). Validée, elle crée un virement (deux jambes) : pas une dépense, le patrimoine total ne change pas, le reste à vivre baisse.
 - Les jambes d'un virement sont désormais mises à jour sur place lors d'une modification (identifiants stables : l'échéance pointe sur la jambe débitrice).
+
+## ADR-027 — Fichiers de tickets stockés dans PostgreSQL
+
+- Contexte : Vercel Hobby n'a pas de disque persistant ; Vercel Blob gratuit bloque le stockage 30 jours en cas de dépassement. Neon Free offre 1 Go par projet.
+- Décision (validée au Sprint 3) : les fichiers sont stockés dans une table dédiée (`receipt_files`, `bytea`, filtrée par `user_id`) derrière l'interface `StorageAdapter` (`put`, `get`, `delete`). Les photos sont normalisées et compressées dans le navigateur (JPEG, grand côté ≤ 2000 px, ~200 Ko) avant envoi ; une miniature est stockée à part. Les PDF sont gardés tels quels (taille maximale 8 Mo).
+- Conséquences : environ 3 000 à 4 000 tickets tiennent dans le quota. Aucun nouveau service, isolation par la même règle que le reste. Un autre adaptateur (S3 compatible, disque en auto-hébergement) pourra remplacer celui-ci sans changer l'appelant.
+
+## ADR-028 — Rapprochement relevé bancaire et transactions
+
+- Décision (validée) : à l'import d'un relevé CSV, une ligne qui correspond à une transaction existante non rapprochée (même compte, montant exact, date à ±3 jours) est **liée** à cette transaction (elle devient « pointée »), rien n'est créé. Les lignes sans correspondance sont créées après aperçu et confirmation. Une ligne déjà importée (même empreinte date + montant + libellé normalisé + compte) est ignorée.
+- Un ticket validé plus tard est rapproché d'une ligne bancaire déjà importée de la même façon : il s'attache à la transaction existante au lieu d'en créer une seconde.
+- Conséquences : colonnes `bank_line_hash` et `reconciled_at` sur `transactions` ; préréglages de colonnes par utilisateur (`bank_import_presets`).
+
+## ADR-029 — Structuration des tickets : règles, Ollama, Gemini
+
+- Décision (validée) : interface `ReceiptStructurer` avec trois adaptateurs. `rules` (défaut) = parseur déterministe. `ollama` = modèle de vision local (Qwen-VL), sortie JSON contrainte par schéma, disponible seulement si `OLLAMA_URL` est configuré (local ou Docker). `gemini-free` = désactivé par défaut, activable par l'utilisateur dans Réglages après un avertissement (l'offre gratuite est limitée et Google peut utiliser les contenus), clé API fournie par l'utilisateur côté serveur.
+- Un modèle n'est appelé que si le parseur échoue ou si la confiance est faible. Sa sortie repasse par la validation Zod et la validation déterministe, puis par la revue humaine (règle 6).
+
+## ADR-030 — Fixtures publiques synthétiques
+
+- Décision (validée) : les fixtures commitées (`fixtures/receipts/`) sont des tickets français synthétiques réalistes rendus en images (bruit, rotation, papier thermique) et en PDF. Les vrais tickets de l'utilisateur restent dans `fixtures/receipts-private/` (ignoré par git) et ne servent qu'au benchmark local, dont seuls les agrégats sont publiés.
