@@ -40,7 +40,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] UI : saisie rapide (palette, touche N, bouton mobile), Transactions, Magasins et fiche, Réglages, tableau de bord du mois
 - [x] Tests : 217 unitaires (domaine 97 %), 44 intégration, 14 e2e (dépense en moins de 10 s)
 - [x] Captures (`docs/screens/sprint-1/`), `ui-reviewer` (2 itérations, tous les écrans validés), `/code-review` (10 corrections appliquées)
-- [~] PR, CI verte
+- [x] PR #2, CI verte
 - [ ] Vérifier : récapitulatif, STOP (puis déploiement Neon + Vercel par l'utilisateur)
 
 ### Reporté (décidé au Sprint 0)
