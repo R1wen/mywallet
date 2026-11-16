@@ -7,3 +7,4 @@ drizzle/meta
 pnpm-lock.yaml
 docs/screens
 public
+fixtures

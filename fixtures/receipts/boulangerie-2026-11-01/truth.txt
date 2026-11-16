@@ -1,0 +1,22 @@
+BOULANGERIE DU MARCHE
+        Artisan boulanger
+        3 PLACE DU MARCHE
+          33000 BORDEAUX
+     SIRET 000 000 333 00019
+
+02/11/26 07:48
+----------------------------------
+2 BAGUETTE TRADITION          2,50
+3 CROISSANT                   3,45
+TARTE AUX POMMES             14,50
+----------------------------------
+NB ARTICLES : 6
+TOTAL        20,45 EUR
+
+ESPECES                      20,00
+RENDU                        -0,45
+
+TAUX        HT       TVA       TTC
+5,50%    19,38      1,07     20,45
+
+      Merci et bonne journee

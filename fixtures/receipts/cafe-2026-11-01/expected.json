@@ -1,0 +1,45 @@
+{
+  "merchant": "Café de la Gare",
+  "merchantRaw": "CAFE DE LA GARE",
+  "date": "2026-11-09",
+  "time": "08:05",
+  "currency": "EUR",
+  "totalCents": 940,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 1000,
+      "baseCents": 855,
+      "vatCents": 85
+    }
+  ],
+  "items": [
+    {
+      "label": "EXPRESSO",
+      "quantity": 2,
+      "unitPriceCents": 180,
+      "totalCents": 360
+    },
+    {
+      "label": "CROISSANT",
+      "quantity": 1,
+      "unitPriceCents": 130,
+      "totalCents": 130
+    },
+    {
+      "label": "JUS ORANGE PRESSE",
+      "quantity": 1,
+      "unitPriceCents": 450,
+      "totalCents": 450
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "cafe",
+    "vat-10",
+    "blur",
+    "small"
+  ]
+}

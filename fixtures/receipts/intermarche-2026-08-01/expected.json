@@ -1,0 +1,63 @@
+{
+  "merchant": "Intermarché",
+  "merchantRaw": "INTERMARCHE SUPER 2290",
+  "date": "2026-08-09",
+  "time": "09:31",
+  "currency": "EUR",
+  "totalCents": 2419,
+  "paymentMethod": "cash",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 1070,
+      "vatCents": 59
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 1075,
+      "vatCents": 215
+    }
+  ],
+  "items": [
+    {
+      "label": "CROISSANTS X6",
+      "quantity": 1,
+      "unitPriceCents": 289,
+      "totalCents": 289
+    },
+    {
+      "label": "CONFITURE FRAISE",
+      "quantity": 1,
+      "unitPriceCents": 249,
+      "totalCents": 249
+    },
+    {
+      "label": "THE VERT X25",
+      "quantity": 1,
+      "unitPriceCents": 199,
+      "totalCents": 199
+    },
+    {
+      "label": "PECHES JAUNES",
+      "quantity": 0.982,
+      "unitPriceCents": 399,
+      "totalCents": 392
+    },
+    {
+      "label": "CREME SOLAIRE SPF50",
+      "quantity": 1,
+      "unitPriceCents": 1290,
+      "totalCents": 1290
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "faded",
+    "low-contrast",
+    "supermarket",
+    "date-short-year",
+    "cash"
+  ]
+}

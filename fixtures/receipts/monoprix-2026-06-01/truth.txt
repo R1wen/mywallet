@@ -1,0 +1,27 @@
+      MONOPRIX 0614
+         40 AVENUE JEAN JAURES
+             92100 BOULOGNE
+        SIRET 000 000 614 00038
+
+27/06/2026 19:58               CAISSE 08
+----------------------------------------
+SALADE CESAR                      4,50 A
+EAU GAZEUSE 50CL                  1,70 A
+  2 x 0,85
+FRAISES 250G                      3,49 A
+GEL DOUCHE                        2,99 C
+BOUGIE PARFUMEE                   9,99 C
+----------------------------------------
+NB ARTICLES : 6
+TOTAL TTC        22,67 EUR
+
+CB                                 22,67
+CARTE BANCAIRE SANS CONTACT
+XXXX XXXX XXXX 3351
+A0000000421010  CB
+
+TAUX              HT       TVA       TTC
+A 5,50%         9,18      0,51      9,69
+C 20,00%       10,82      2,16     12,98
+
+         Merci de votre visite
