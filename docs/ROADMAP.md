@@ -28,8 +28,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] CI, CD (Vercel + Neon), Dependabot, CodeQL, gitleaks
 - [x] Captures, `ui-reviewer` (corrections appliquées), `security-reviewer` (faille CD corrigée)
 - [x] `/code-review` (9 corrections appliquées)
-- [ ] Dépôt GitHub, push, PR, `/security-review`, CI verte (en attente de `gh auth login`)
-- [ ] Vérifier : récapitulatif, STOP
+- [x] Dépôt GitHub public, PR #1, `/security-review` (aucune vulnérabilité), CI verte (alerte CodeQL ReDoS corrigée)
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #1 par l'utilisateur)
 
 ### Reporté (décidé au Sprint 0)
 
