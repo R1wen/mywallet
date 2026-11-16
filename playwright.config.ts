@@ -5,6 +5,7 @@ const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: false,
   // En dev, la première compilation d'une route + le hachage scrypt dépassent 5 s.
   expect: { timeout: 15_000 },

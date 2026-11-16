@@ -26,7 +26,12 @@ test.describe("authentification", () => {
     await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible();
 
     // Déconnexion via la palette de commandes (fonctionne sur desktop et mobile).
-    await page.keyboard.press("Control+k");
+    // Le raccourci n'agit qu'une fois la page hydratée : on réessaie jusqu'à l'ouverture.
+    const signOutOption = page.getByRole("option", { name: "Se déconnecter" });
+    await expect(async () => {
+      if (!(await signOutOption.isVisible())) await page.keyboard.press("Control+k");
+      await expect(signOutOption).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
     await page.getByRole("option", { name: "Se déconnecter" }).click();
     await expect(page).toHaveURL(/\/connexion$/);
 

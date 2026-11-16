@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/lib/db/client";
 import { authAccount, rateLimit, session, user, verification } from "@/lib/db/schema/auth";
 import { serverEnv } from "@/lib/env";
+import { provisionUser } from "@/lib/server/provisioning";
 import { PASSWORD_MAX, PASSWORD_MIN, signInSchema, signUpSchema } from "./validation";
 
 const env = serverEnv();
@@ -42,6 +43,17 @@ export const auth = betterAuth({
     minPasswordLength: PASSWORD_MIN,
     maxPasswordLength: PASSWORD_MAX,
     autoSignIn: true,
+  },
+  databaseHooks: {
+    // Catégories, catalogue d'enseignes et compte courant pour démarrer (ADR-023).
+    // Rejoué à chaque connexion (idempotent) : un échec à l'inscription se rattrape seul.
+    session: {
+      create: {
+        after: async (created) => {
+          await provisionUser(created.userId).catch(() => undefined);
+        },
+      },
+    },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 14, // 14 jours

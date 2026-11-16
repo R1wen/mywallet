@@ -27,6 +27,17 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
   );
 }
 
+/** Sélecteur natif : rapide au clavier, accessible, idéal dans les formulaires de saisie. */
+export function NativeSelect({ className, ...props }: ComponentProps<"select">) {
+  return (
+    <select
+      data-slot="native-select"
+      className={cn(inputClass, "appearance-auto pr-1.5 [color-scheme:dark]", className)}
+      {...props}
+    />
+  );
+}
+
 export function Label({ className, ...props }: ComponentProps<typeof LabelPrimitive.Root>) {
   return (
     <LabelPrimitive.Root

@@ -10,8 +10,13 @@ import { isActive, isAvailable, NAV_ITEMS } from "./nav";
 
 const STORAGE_KEY = "mw.sidebar.collapsed";
 
+/** Lit le chemin courant : à placer sous <Suspense> (routes à paramètre dynamique). */
 export function Sidebar({ footer }: { footer?: ReactNode }) {
-  const pathname = usePathname();
+  return <SidebarView pathname={usePathname()} footer={footer} />;
+}
+
+/** Barre latérale ; `pathname` null = repli sans élément actif (fallback de Suspense). */
+export function SidebarView({ pathname, footer }: { pathname: string | null; footer?: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -67,7 +72,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
       <nav aria-label="Navigation principale" className="flex-1 overflow-y-auto p-2">
         <ul className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = pathname !== null && isActive(pathname, item.href);
             const available = isAvailable(item);
             const content = (
               <>

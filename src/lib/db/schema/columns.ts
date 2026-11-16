@@ -4,7 +4,7 @@
  * timestamptz audit columns. Column names come from `casing: "snake_case"`.
  */
 import { sql } from "drizzle-orm";
-import { bigint, char, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, char, customType, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
 export const id = () => uuid("id").primaryKey().defaultRandom();
@@ -17,6 +17,11 @@ export const ownerId = () =>
 
 /** Integer cents (never floats). `name` must end with `_cents`. */
 export const cents = (name: `${string}_cents`) => bigint(name, { mode: "number" });
+
+/** Binary column (node-postgres returns a Buffer). */
+export const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
 
 export const currency = () => char("currency", { length: 3 }).notNull().default("EUR");
 

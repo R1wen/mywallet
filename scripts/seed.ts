@@ -13,7 +13,7 @@ import { hashPassword } from "better-auth/crypto";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { normalizeMerchantName } from "../src/lib/domain/merchant";
+import { buildCatalogRows } from "../src/lib/catalog";
 import { toParisDateString, daysInMonth } from "../src/lib/domain/dates";
 import { formatCents } from "../src/lib/domain/money";
 import * as schema from "../src/lib/db/schema";
@@ -112,189 +112,6 @@ const ago = (n: number) => (addDays(TODAY, -n) < START ? START : addDays(TODAY, 
 /* Reference data                                                             */
 /* -------------------------------------------------------------------------- */
 
-type CategoryKind = schema.CategoryKind;
-const CATEGORY_TREE: {
-  key: string;
-  name: string;
-  kind: CategoryKind;
-  icon: string;
-  children: [key: string, name: string][];
-}[] = [
-  {
-    key: "alimentation",
-    name: "Alimentation",
-    kind: "expense",
-    icon: "shopping-basket",
-    children: [
-      ["courses", "Courses"],
-      ["restaurants", "Restaurants"],
-      ["livraison", "Livraison de repas"],
-    ],
-  },
-  {
-    key: "logement",
-    name: "Logement",
-    kind: "expense",
-    icon: "house",
-    children: [
-      ["loyer", "Loyer"],
-      ["energie", "Énergie"],
-      ["eau", "Eau"],
-      ["assurance_habitation", "Assurance habitation"],
-      ["maison", "Maison et bricolage"],
-    ],
-  },
-  {
-    key: "transports",
-    name: "Transports",
-    kind: "expense",
-    icon: "car",
-    children: [
-      ["carburant", "Carburant"],
-      ["transports_commun", "Transports en commun"],
-      ["taxi", "Taxi et VTC"],
-      ["train", "Train"],
-      ["peages", "Péages"],
-    ],
-  },
-  {
-    key: "abonnements",
-    name: "Abonnements",
-    kind: "expense",
-    icon: "repeat",
-    children: [
-      ["telecoms", "Télécoms"],
-      ["streaming", "Streaming et musique"],
-    ],
-  },
-  {
-    key: "sante",
-    name: "Santé",
-    kind: "expense",
-    icon: "heart-pulse",
-    children: [
-      ["pharmacie", "Pharmacie"],
-      ["medecin", "Médecin"],
-    ],
-  },
-  {
-    key: "loisirs",
-    name: "Loisirs",
-    kind: "expense",
-    icon: "ticket",
-    children: [
-      ["sorties", "Sorties et cinéma"],
-      ["sport", "Sport"],
-      ["voyages", "Voyages"],
-      ["livres", "Livres et culture"],
-    ],
-  },
-  {
-    key: "shopping",
-    name: "Shopping",
-    kind: "expense",
-    icon: "shopping-bag",
-    children: [
-      ["vetements", "Vêtements"],
-      ["high_tech", "High-tech"],
-      ["beaute", "Beauté"],
-      ["achats_divers", "Achats divers"],
-    ],
-  },
-  {
-    key: "revenus",
-    name: "Revenus",
-    kind: "income",
-    icon: "wallet",
-    children: [
-      ["salaire", "Salaire"],
-      ["autres_revenus", "Autres revenus"],
-    ],
-  },
-  { key: "epargne", name: "Épargne", kind: "transfer", icon: "piggy-bank", children: [] },
-  { key: "retraits", name: "Retraits d'espèces", kind: "transfer", icon: "banknote", children: [] },
-];
-
-/** [display name, domain, default category key, extra raw aliases]. */
-const MERCHANTS: [string, string | null, string, string[]][] = [
-  // Grande distribution
-  ["Carrefour", "carrefour.fr", "courses", ["Carrefour Market", "Carrefour City", "CRF Express"]],
-  ["E.Leclerc", "e.leclerc", "courses", ["Leclerc", "E Leclerc Drive"]],
-  ["Auchan", "auchan.fr", "courses", ["Auchan Supermarché"]],
-  ["Intermarché", "intermarche.com", "courses", ["ITM", "Intermarche Super"]],
-  ["Lidl", "lidl.fr", "courses", []],
-  ["Aldi", "aldi.fr", "courses", []],
-  ["Monoprix", "monoprix.fr", "courses", ["Monop'"]],
-  ["Franprix", "franprix.fr", "courses", []],
-  ["Picard", "picard.fr", "courses", ["Picard Surgelés"]],
-  ["Casino", "casino.fr", "courses", ["Casino Shop"]],
-  ["Super U", "magasins-u.com", "courses", ["Hyper U", "U Express"]],
-  ["Biocoop", "biocoop.fr", "courses", []],
-  ["Naturalia", "naturalia.fr", "courses", []],
-  ["Grand Frais", "grandfrais.com", "courses", []],
-  // E-commerce et enseignes
-  ["Amazon", "amazon.fr", "achats_divers", ["Amazon Marketplace", "AMZN Mktp FR"]],
-  ["Cdiscount", "cdiscount.com", "achats_divers", []],
-  ["Fnac", "fnac.com", "high_tech", ["Fnac.com"]],
-  ["Darty", "darty.com", "high_tech", []],
-  ["Boulanger", "boulanger.com", "high_tech", []],
-  ["Apple", "apple.com", "high_tech", ["Apple.com/bill", "Apple Store"]],
-  ["Decathlon", "decathlon.fr", "sport", []],
-  ["IKEA", "ikea.com", "maison", []],
-  ["Leroy Merlin", "leroymerlin.fr", "maison", []],
-  ["Castorama", "castorama.fr", "maison", []],
-  ["Zalando", "zalando.fr", "vetements", []],
-  ["Vinted", "vinted.fr", "vetements", []],
-  ["Leboncoin", "leboncoin.fr", "achats_divers", []],
-  ["Sephora", "sephora.fr", "beaute", []],
-  ["Uniqlo", "uniqlo.com", "vetements", []],
-  ["Kiabi", "kiabi.com", "vetements", []],
-  // Restauration
-  ["McDonald's", "mcdonalds.fr", "restaurants", ["McDo", "Mc Donalds"]],
-  ["Burger King", "burgerking.fr", "restaurants", []],
-  ["KFC", "kfc.fr", "restaurants", []],
-  ["Starbucks", "starbucks.fr", "restaurants", []],
-  ["Paul", "paul.fr", "restaurants", ["Boulangerie Paul"]],
-  ["Big Mamma", "bigmammagroup.com", "restaurants", []],
-  ["Deliveroo", "deliveroo.fr", "livraison", []],
-  ["Uber Eats", "ubereats.com", "livraison", []],
-  ["Domino's", "dominos.fr", "livraison", ["Dominos Pizza"]],
-  // Transports
-  ["SNCF Connect", "sncf-connect.com", "train", ["SNCF", "OUIGO"]],
-  ["RATP", "ratp.fr", "transports_commun", []],
-  ["Île-de-France Mobilités", "iledefrance-mobilites.fr", "transports_commun", ["Navigo"]],
-  ["Uber", "uber.com", "taxi", ["Uber Trip"]],
-  ["BlaBlaCar", "blablacar.fr", "train", []],
-  ["TotalEnergies", "totalenergies.fr", "carburant", ["Total Access"]],
-  ["Shell", "shell.fr", "carburant", []],
-  ["Esso", "esso.fr", "carburant", []],
-  ["Vinci Autoroutes", "vinci-autoroutes.com", "peages", []],
-  // Énergie, eau, logement
-  ["EDF", "edf.fr", "energie", ["EDF Clients Particuliers"]],
-  ["Engie", "engie.fr", "energie", []],
-  ["Veolia", "veolia.fr", "eau", ["Eau de Paris"]],
-  ["Foncia", "foncia.com", "loyer", []],
-  ["MAIF", "maif.fr", "assurance_habitation", []],
-  // Télécoms
-  ["Free", "free.fr", "telecoms", ["Free Telecom", "Freebox"]],
-  ["Orange", "orange.fr", "telecoms", []],
-  ["SFR", "sfr.fr", "telecoms", []],
-  ["Bouygues Telecom", "bouyguestelecom.fr", "telecoms", []],
-  // Streaming
-  ["Netflix", "netflix.com", "streaming", ["Netflix.com"]],
-  ["Spotify", "spotify.com", "streaming", ["Spotify P"]],
-  ["Canal+", "canalplus.com", "streaming", []],
-  ["Deezer", "deezer.com", "streaming", []],
-  ["Disney+", "disneyplus.com", "streaming", []],
-  // Voyages, loisirs, santé
-  ["Airbnb", "airbnb.fr", "voyages", []],
-  ["Booking.com", "booking.com", "voyages", []],
-  ["UGC", "ugc.fr", "sorties", ["UGC Ciné Cité"]],
-  ["Pathé", "pathe.fr", "sorties", []],
-  ["Doctolib", "doctolib.fr", "medecin", []],
-  ["Pharmacie du Marché", null, "pharmacie", []],
-];
-
 const GROCERY_MERCHANTS = [
   "Carrefour",
   "Carrefour",
@@ -338,66 +155,15 @@ const GROCERY_ITEMS: [string, number, boolean][] = [
 /* Builders                                                                   */
 /* -------------------------------------------------------------------------- */
 
-const categoryIds = new Map<string, string>();
-const merchantIds = new Map<string, string>();
-const merchantCategory = new Map<string, string>();
-
-const categoryRows: (typeof schema.categories.$inferInsert)[] = [];
-CATEGORY_TREE.forEach((root, i) => {
-  const rootId = uuid();
-  categoryIds.set(root.key, rootId);
-  categoryRows.push({
-    id: rootId,
-    userId: DEMO_USER_ID,
-    name: root.name,
-    kind: root.kind,
-    icon: root.icon,
-    position: i,
-  });
-  root.children.forEach(([key, name], j) => {
-    const childId = uuid();
-    categoryIds.set(key, childId);
-    categoryRows.push({
-      id: childId,
-      userId: DEMO_USER_ID,
-      parentId: rootId,
-      name,
-      kind: root.kind,
-      position: j,
-    });
-  });
-});
+const catalog = buildCatalogRows(DEMO_USER_ID, uuid);
+const { categoryIds, merchantIds, merchantCategory } = catalog;
+const categoryRows = catalog.categories;
+const merchantRows = catalog.merchants;
 
 function cat(key: string): string {
   const id = categoryIds.get(key);
   if (!id) throw new Error(`unknown category ${key}`);
   return id;
-}
-
-const merchantRows: (typeof schema.merchants.$inferInsert)[] = MERCHANTS.map(
-  ([name, domain, categoryKey, aliases]) => {
-    const id = uuid();
-    merchantIds.set(name, id);
-    merchantCategory.set(name, categoryKey);
-    const normalizedName = normalizeMerchantName(name);
-    return {
-      id,
-      userId: DEMO_USER_ID,
-      name,
-      normalizedName,
-      aliases: [...new Set(aliases.map(normalizeMerchantName))].filter(
-        (a) => a && a !== normalizedName,
-      ),
-      domain,
-      defaultCategoryId: cat(categoryKey),
-    };
-  },
-);
-
-{
-  const keys = merchantRows.map((m) => m.normalizedName);
-  const dupes = keys.filter((k, i) => !k || keys.indexOf(k) !== i);
-  if (dupes.length) throw new Error(`normalized merchant names collide: ${dupes.join(", ")}`);
 }
 
 function merchant(name: string): string {
@@ -734,6 +500,16 @@ for (const day of DAYS) {
 }
 
 /* Cost sharing scenarios --------------------------------------------------- */
+
+// Avoir marchand (ADR-020) : un retour Zalando remboursé, qui réduit la dépense Vêtements.
+addTx({ day: ago(20), kind: "expense", amountCents: -8990, label: "Zalando", merchant: "Zalando" });
+addTx({
+  day: ago(12),
+  kind: "refund",
+  amountCents: 4990,
+  label: "Zalando - retour",
+  merchant: "Zalando",
+});
 
 function claim(input: {
   person: string;
