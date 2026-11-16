@@ -218,12 +218,14 @@ const peopleRows: (typeof schema.people.$inferInsert)[] = [
 
 type RuleSpec = {
   key: string;
-  kind: "expense" | "income";
+  kind: "expense" | "income" | "transfer";
   label: string;
   amountCents: number;
   dayOfMonth: number;
   merchant?: string;
   category: string;
+  /** Savings destination (transfer rules). */
+  toAccount?: string;
 };
 
 const RULES: RuleSpec[] = [
@@ -271,6 +273,24 @@ const RULES: RuleSpec[] = [
     merchant: "Netflix",
     category: "streaming",
   },
+  {
+    key: "spotify",
+    kind: "expense",
+    label: "Spotify Premium",
+    amountCents: -1_199,
+    dayOfMonth: 22,
+    merchant: "Spotify",
+    category: "streaming",
+  },
+  {
+    key: "epargne",
+    kind: "transfer",
+    label: "Virement vers Livret A",
+    amountCents: -20_000,
+    dayOfMonth: 2,
+    category: "epargne",
+    toAccount: ACCOUNT.livret,
+  },
 ];
 
 const ruleIds = new Map(RULES.map((r) => [r.key, uuid()]));
@@ -278,6 +298,7 @@ const ruleRows: (typeof schema.recurringRules.$inferInsert)[] = RULES.map((r) =>
   id: ruleIds.get(r.key)!,
   userId: DEMO_USER_ID,
   accountId: ACCOUNT.courant,
+  toAccountId: r.toAccount ?? null,
   kind: r.kind,
   label: r.label,
   amountCents: r.amountCents,
@@ -378,7 +399,14 @@ function expense(
   });
 }
 
-function transfer(day: string, from: string, to: string, amountCents: number, label: string) {
+function transfer(
+  day: string,
+  from: string,
+  to: string,
+  amountCents: number,
+  label: string,
+  recurring?: string,
+) {
   const group = uuid();
   const category = from === ACCOUNT.courant && to === ACCOUNT.livret ? "epargne" : "retraits";
   addTx({
@@ -389,6 +417,7 @@ function transfer(day: string, from: string, to: string, amountCents: number, la
     account: from,
     category,
     transferGroupId: group,
+    recurring,
   });
   addTx({
     day,
@@ -398,6 +427,7 @@ function transfer(day: string, from: string, to: string, amountCents: number, la
     account: to,
     category,
     transferGroupId: group,
+    recurring,
   });
 }
 
@@ -466,14 +496,16 @@ for (const day of DAYS) {
     });
     expense(day, "Île-de-France Mobilités", 8_880, { label: "Forfait Navigo mois" });
   }
-  if (dom === 2) transfer(day, ACCOUNT.courant, ACCOUNT.livret, 20_000, "Virement vers Livret A");
+  if (dom === 2)
+    transfer(day, ACCOUNT.courant, ACCOUNT.livret, 20_000, "Virement vers Livret A", "epargne");
   if (dom === 3) expense(day, "MAIF", 1_850, { label: "Assurance habitation MAIF" });
   if (dom === 5) expense(day, "Foncia", 89_000, { label: "Loyer Foncia", recurring: "loyer" });
   if (dom === 6) transfer(day, ACCOUNT.courant, ACCOUNT.especes, 6_000, "Retrait DAB");
   if (dom === 8) expense(day, "EDF", 7_840, { label: "Mensualité EDF", recurring: "edf" });
   if (dom === 12) expense(day, "Free", 2_999, { label: "Freebox Pop", recurring: "free" });
   if (dom === 15) expense(day, "Netflix", 1_499, { recurring: "netflix" });
-  if (dom === 22) expense(day, "Spotify", 1_199, { label: "Spotify Premium" });
+  if (dom === 22)
+    expense(day, "Spotify", 1_199, { label: "Spotify Premium", recurring: "spotify" });
   if (dom === 25 && chance(0.5)) expense(day, "Veolia", 3_120, { label: "Facture d'eau" });
 
   // Everyday life.
@@ -799,6 +831,7 @@ async function main(): Promise<void> {
       for (let i = 0; i < txRows.length; i += 500) {
         await tx.insert(schema.transactions).values(txRows.slice(i, i + 500));
       }
+      await tx.insert(schema.recurringOccurrences).values(occurrenceRows());
       await tx.insert(schema.transactionItems).values(itemRows);
       await tx.insert(schema.claims).values(claimRows);
       await tx.insert(schema.claimPayments).values(paymentRows);
@@ -812,6 +845,24 @@ async function main(): Promise<void> {
   } finally {
     await pool.end();
   }
+}
+
+/**
+ * Every seeded recurring movement is a validated occurrence of its rule (the debit leg for a
+ * saving), so the calendar shows the past months and generation never duplicates them.
+ */
+function occurrenceRows(): (typeof schema.recurringOccurrences.$inferInsert)[] {
+  const amountOf = new Map(ruleRows.map((r) => [r.id!, r.amountCents]));
+  return txRows
+    .filter((t) => t.recurringRuleId && (t.kind !== "transfer" || t.amountCents < 0))
+    .map((t) => ({
+      userId: DEMO_USER_ID,
+      ruleId: t.recurringRuleId!,
+      dueOn: t.occurredOn,
+      amountCents: amountOf.get(t.recurringRuleId!)!,
+      status: "confirmed" as const,
+      transactionId: t.id!,
+    }));
 }
 
 /** Counts plus a sanity check of the financial rules on the generated data. */

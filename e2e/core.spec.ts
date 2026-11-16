@@ -150,3 +150,43 @@ test.describe("cœur : transactions, magasins, réglages", () => {
     await expect(page.getByRole("button", { name: /Livret A/ })).toContainText(/1\s500,00/);
   });
 });
+
+test.describe("récurrent : règles, échéances, reste à vivre", () => {
+  test("crée une charge due aujourd'hui puis la valide depuis le tableau de bord", async () => {
+    await page.goto("/recurrent");
+    await expect(page.getByText("Aucune règle récurrente.")).toBeVisible({ timeout: 60_000 });
+    await expect(async () => {
+      if (!(await page.getByRole("dialog").isVisible())) {
+        await page
+          .getByRole("button", { name: "Nouvelle règle" })
+          .first()
+          .click({ timeout: 2_000 });
+      }
+      await expect(page.getByLabel("Montant")).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+    // Par défaut : charge mensuelle, le jour d'aujourd'hui, à partir d'aujourd'hui.
+    await page.getByLabel("Montant").fill("9,99");
+    await page.getByLabel("Magasin ou organisme").fill("Netflix");
+    await page.getByRole("dialog").getByRole("button", { name: "Ajouter" }).click();
+    await expect(page.getByText("Règle ajoutée.")).toBeVisible();
+
+    await page.goto("/recurrent?vue=regles");
+    await expect(rowWith(page, "Netflix")).toContainText("-9,99");
+
+    await page.goto("/");
+    const card = page.locator("section").filter({ hasText: "Reste à vivre" });
+    const due = card.getByRole("button", { name: /Netflix/ });
+    await expect(due).toContainText("Aujourd'hui", { timeout: 60_000 });
+    await expect(async () => {
+      if (!(await page.getByRole("dialog").isVisible())) await due.click({ timeout: 2_000 });
+      await expect(page.getByLabel("Montant réel")).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+    await page.getByLabel("Montant réel").fill("10,49");
+    await page.getByRole("button", { name: "Valider" }).click();
+    await expect(page.getByText("Échéance validée : le mouvement est enregistré.")).toBeVisible();
+    await expect(card.getByText("Aucune échéance à valider cette semaine.")).toBeVisible();
+
+    await page.goto("/transactions");
+    await expect(rowWith(page, "Netflix")).toContainText("-10,49", { timeout: 60_000 });
+  });
+});
