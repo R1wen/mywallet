@@ -116,7 +116,7 @@ export function parseModelReceipt(raw: unknown): ParsedReceipt | null {
     ];
   });
   const vat = m.vat.flatMap((v) => {
-    const rate = Number(v.rate.replace(",", ".").replace("%", ""));
+    const rate = Number(v.rate.replace(/%/g, "").trim().replace(",", "."));
     const baseCents = money(v.base);
     const vatCents = money(v.amount);
     if (!Number.isFinite(rate) || baseCents === null || vatCents === null) return [];
