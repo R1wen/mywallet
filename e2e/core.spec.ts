@@ -135,7 +135,10 @@ test.describe("cœur : transactions, magasins, réglages", () => {
     await page.goto("/reglages");
     await expect(async () => {
       if (!(await page.getByRole("dialog").isVisible())) {
-        await page.getByRole("button", { name: "Ajouter" }).first().click({ timeout: 2_000 });
+        await page
+          .getByRole("button", { name: "Ajouter", exact: true })
+          .first()
+          .click({ timeout: 2_000 });
       }
       await expect(page.getByLabel("Nom")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 60_000 });
