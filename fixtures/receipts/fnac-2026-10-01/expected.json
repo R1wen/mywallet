@@ -1,0 +1,55 @@
+{
+  "merchant": "Fnac",
+  "merchantRaw": "FNAC.COM",
+  "date": "2026-10-08",
+  "time": null,
+  "currency": "EUR",
+  "totalCents": 16787,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 749,
+      "vatCents": 41
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 13331,
+      "vatCents": 2666
+    }
+  ],
+  "items": [
+    {
+      "label": "Casque audio sans fil",
+      "quantity": 1,
+      "unitPriceCents": 12999,
+      "totalCents": 12999
+    },
+    {
+      "label": "Roman poche - Le Grand Meaulnes",
+      "quantity": 1,
+      "unitPriceCents": 790,
+      "totalCents": 790
+    },
+    {
+      "label": "Câble USB-C 1 m",
+      "quantity": 2,
+      "unitPriceCents": 1499,
+      "totalCents": 2998
+    },
+    {
+      "label": "Frais de livraison",
+      "quantity": 1,
+      "unitPriceCents": 399,
+      "totalCents": 399
+    }
+  ],
+  "discountsCents": -399,
+  "returnDeadline": null,
+  "warrantyUntil": "2028-10-08",
+  "difficulty": [
+    "pdf",
+    "e-commerce",
+    "warranty"
+  ]
+}

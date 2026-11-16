@@ -1,0 +1,69 @@
+{
+  "merchant": "Lidl",
+  "merchantRaw": "LIDL 1842",
+  "date": "2026-09-22",
+  "time": "17:05",
+  "currency": "EUR",
+  "totalCents": 1602,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 1282,
+      "vatCents": 71
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 208,
+      "vatCents": 41
+    }
+  ],
+  "items": [
+    {
+      "label": "BAGUETTE TRADITION",
+      "quantity": 2,
+      "unitPriceCents": 99,
+      "totalCents": 198
+    },
+    {
+      "label": "FROMAGE BLANC 1KG",
+      "quantity": 1,
+      "unitPriceCents": 199,
+      "totalCents": 199
+    },
+    {
+      "label": "COMPOTE POMME X4",
+      "quantity": 1,
+      "unitPriceCents": 139,
+      "totalCents": 139
+    },
+    {
+      "label": "STEAK HACHE 5% X2",
+      "quantity": 1,
+      "unitPriceCents": 359,
+      "totalCents": 359
+    },
+    {
+      "label": "BROSSE A DENTS X2",
+      "quantity": 1,
+      "unitPriceCents": 249,
+      "totalCents": 249
+    },
+    {
+      "label": "CAPSULES CAFE X10",
+      "quantity": 2,
+      "unitPriceCents": 229,
+      "totalCents": 458
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "photo",
+    "rotated",
+    "noise",
+    "supermarket",
+    "date-dot"
+  ]
+}

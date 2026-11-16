@@ -184,9 +184,10 @@ function paymentOf(k: string): PaymentMethod | null {
   return null;
 }
 
-const DISCOUNT = /REMISE|REDUCTION|\bPROMO|BON (DE )?REDUC|COUPON|AVANTAGE|FIDELITE|\bRIST/;
+const DISCOUNT =
+  /REMISE|REDUCTION|\bPROMO|BON (DE )?REDUC|COUPON|AVANTAGE|FIDELITE|\bRIST|\bSOLDES\b/;
 const NON_ITEM =
-  /TOTAL|\bTVA\b|T\.V\.A|\bHT\b|\bTTC\b|RENDU|MONNAIE|\bPAYER\b|MONTANT|\bCAISSE\b|TICKET|\bTABLE\b|COUVERT|\bTEL\b|SIRET|MERCI|ARTICLES?\b|TRANSACTION|AUTORISATION|\bDEBIT\b|\bCREDIT\b|\bSOLDE\b|\bACOMPTE\b|%/;
+  /TOTAL|\bTVA\b|T\.V\.A|\bHT\b|\bTTC\b|RENDU|MONNAIE|\bPAYER\b|MONTANT|\bCAISSE\b|TICKET|\bTABLE\b|COUVERT|\bTEL\b|SIRET|MERCI|ARTICLES?\b|TRANSACTION|AUTORISATION|\bDEBIT\b|\bCREDIT\b|\bSOLDE\b|\bACOMPTE\b/;
 const HEADER_NOISE =
   /^(TICKET|FACTURE|BIENVENUE|BONJOUR|WELCOME|SIRET|TEL\b|N[°O] |TVA INTRA|DUPLICATA|COPIE)/;
 const FUEL = /(\d+[,.]\d{2,3})\s*L\s*[X*]\s*(\d+[,.]\d{2,3})\s*(?:€|EUR)?\s*\/\s*L/;
@@ -215,10 +216,16 @@ function hasLetters(s: string, min = 2): boolean {
 
 function parseVatLine(line: string, k: string): { rateBp: number; amounts: number[] } | null {
   const rate = /(\d{1,2}(?:[,.]\d{1,2})?)\s?%/.exec(line);
-  if (!rate || !(/TVA|T\.V\.A|\bHT\b/.test(k) || /^[A-Z0-9]\s/.test(k.trim()))) return null;
+  if (!rate) return null;
+  const keyword = /TVA|T\.V\.A|\bHT\b/.test(k);
+  // VAT table row without the word "TVA": optional code letter, then the rate first.
+  const tableRow = /^([A-Z0-9]{1,2}\s+)?\d{1,2}(?:[,.]\d{1,2})?\s?%/.test(k.trim());
+  if (!keyword && !tableRow) return null;
   const rateBp = Math.round(decimal(rate[1] ?? "") * 100);
   if (rateBp <= 0 || rateBp > 3000) return null;
-  return { rateBp, amounts: findAmounts(line).map((a) => Math.abs(a.cents)) };
+  const amounts = findAmounts(line).map((a) => Math.abs(a.cents));
+  if (!keyword && amounts.length < 2) return null;
+  return { rateBp, amounts };
 }
 
 function vatFromAmounts(
@@ -248,7 +255,15 @@ export function parseReceiptText(text: string): ParsedReceipt {
   const lines = text
     .normalize("NFC")
     .split(/\r?\n/)
-    .map((l) => fixAmountGlyphs(l.replace(/\t/g, "  ").trim()))
+    .map((l) =>
+      fixAmountGlyphs(
+        l
+          .replace(/\t/g, "  ")
+          // Some OCR engines glue the time to the date: "25/10/202614:52".
+          .replace(/(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})(\d{1,2}[:h]\d{2})/g, "$1 $2")
+          .trim(),
+      ),
+    )
     .filter((l) => l.length > 0);
   const keys = lines.map(key);
 
@@ -364,6 +379,14 @@ export function parseReceiptText(text: string): ParsedReceipt {
       const unit = decimal(fuel[2] ?? "") * 100;
       const amounts = findAmounts(line);
       const totalOnLine = amounts[amounts.length - 1]?.cents;
+      const prev = items[items.length - 1];
+      if (totalOnLine === undefined && prev && prev.totalCents === roundCents(quantity * unit)) {
+        // Litres line under "GAZOLE 68,95": detail of that item.
+        prev.quantity = quantity;
+        prev.unitPriceCents = roundCents(unit);
+        pendingLabel = null;
+        continue;
+      }
       const label = pendingFuel ?? "Carburant";
       const original = /[A-Z0-9-]+/i.exec(
         line.slice(line.toUpperCase().indexOf(label.replace(" ", ""))),
@@ -394,7 +417,13 @@ export function parseReceiptText(text: string): ParsedReceipt {
       pendingLabel = null;
       continue;
     }
-    if (NON_ITEM.test(k) || paymentOf(k) || last.cents <= 0) {
+    if (NON_ITEM.test(k) || paymentOf(k)) {
+      pendingLabel = null;
+      continue;
+    }
+    if (last.cents < 0) {
+      // Negative line without the word "remise" ("Livraison offerte -3,99"): a discount.
+      discountsCents += last.cents;
       pendingLabel = null;
       continue;
     }
@@ -405,6 +434,23 @@ export function parseReceiptText(text: string): ParsedReceipt {
     let label = cleanLabel(before);
     if (!hasLetters(label)) label = pendingLabel ?? "";
     pendingLabel = null;
+    // "2 x 0,85" alone under an item: detail of that item (its total = quantity x price).
+    if ((weight || qty) && amounts.length === 1 && !hasLetters(cleanLabel(before))) {
+      const m = (weight ?? qty)!;
+      const quantity = decimal(m[1] ?? "");
+      const unitPriceCents = roundCents(decimal(m[2] ?? "") * 100);
+      const totalCents = roundCents(quantity * unitPriceCents);
+      const prev = items[items.length - 1];
+      if (!label && prev && prev.totalCents === totalCents) {
+        prev.quantity = quantity;
+        prev.unitPriceCents = unitPriceCents;
+      } else if (label) {
+        items.push({ label, quantity, unitPriceCents, totalCents });
+      } else {
+        pendingItem = { quantity, unitPriceCents, totalCents };
+      }
+      continue;
+    }
     if (!label) {
       if (weight || qty) {
         const m = (weight ?? qty)!;

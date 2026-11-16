@@ -1,0 +1,62 @@
+{
+  "merchant": "Le Bistrot des Halles",
+  "merchantRaw": "LE BISTROT DES HALLES",
+  "date": "2026-10-17",
+  "time": "21:15",
+  "currency": "EUR",
+  "totalCents": 9230,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 1000,
+      "baseCents": 6936,
+      "vatCents": 694
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 1333,
+      "vatCents": 267
+    }
+  ],
+  "items": [
+    {
+      "label": "MENU DU JOUR",
+      "quantity": 2,
+      "unitPriceCents": 1650,
+      "totalCents": 3300
+    },
+    {
+      "label": "ENTRECOTE FRITES",
+      "quantity": 1,
+      "unitPriceCents": 2200,
+      "totalCents": 2200
+    },
+    {
+      "label": "CAFE GOURMAND",
+      "quantity": 2,
+      "unitPriceCents": 790,
+      "totalCents": 1580
+    },
+    {
+      "label": "CARAFE VIN ROUGE 50CL",
+      "quantity": 1,
+      "unitPriceCents": 1600,
+      "totalCents": 1600
+    },
+    {
+      "label": "EAU PETILLANTE 1L",
+      "quantity": 1,
+      "unitPriceCents": 550,
+      "totalCents": 550
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "restaurant",
+    "vat-10",
+    "net-a-payer",
+    "time-h"
+  ]
+}

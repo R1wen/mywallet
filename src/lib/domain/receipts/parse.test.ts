@@ -235,6 +235,30 @@ TOTAL TTC 3,50
     ]);
   });
 
+  it("splits a time glued to the date", () => {
+    const r = parseReceiptText(`KIABI
+PULL 22,00
+TOTAL 22,00
+25/10/202614:52`);
+    expect([r.date, r.time]).toEqual(["2026-10-25", "14:52"]);
+  });
+
+  it("keeps items whose label contains a percentage", () => {
+    const r = parseReceiptText(`LIDL
+STEAK HACHE 5% X2 3,59 A
+TOTAL 3,59`);
+    expect(r.items.map((i) => i.totalCents)).toEqual([359]);
+  });
+
+  it("treats a negative line without keyword as a discount", () => {
+    const r = parseReceiptText(`FNAC
+CASQUE 49,99
+Livraison offerte -3,99
+TOTAL 46,00`);
+    expect(r.discountsCents).toBe(-399);
+    expect(r.items).toHaveLength(1);
+  });
+
   it("fixes common OCR letter/digit swaps inside amounts", () => {
     const r = parseReceiptText(`
 PICARD

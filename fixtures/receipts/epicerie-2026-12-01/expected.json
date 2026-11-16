@@ -1,0 +1,84 @@
+{
+  "merchant": "Épicerie Fine des Prés",
+  "merchantRaw": "ÉPICERIE FINE DES PRÉS",
+  "date": "2026-12-19",
+  "time": "17:34",
+  "currency": "EUR",
+  "totalCents": 8865,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 5957,
+      "vatCents": 328
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 2150,
+      "vatCents": 430
+    }
+  ],
+  "items": [
+    {
+      "label": "Crème brûlée x2",
+      "quantity": 1,
+      "unitPriceCents": 590,
+      "totalCents": 590
+    },
+    {
+      "label": "Pâté de campagne",
+      "quantity": 1,
+      "unitPriceCents": 645,
+      "totalCents": 645
+    },
+    {
+      "label": "Bûche pâtissière",
+      "quantity": 1,
+      "unitPriceCents": 2490,
+      "totalCents": 2490
+    },
+    {
+      "label": "Fromage affiné 250g",
+      "quantity": 1,
+      "unitPriceCents": 780,
+      "totalCents": 780
+    },
+    {
+      "label": "Pain d'épices maïs",
+      "quantity": 1,
+      "unitPriceCents": 520,
+      "totalCents": 520
+    },
+    {
+      "label": "Côtes-du-Rhône 75cl",
+      "quantity": 2,
+      "unitPriceCents": 1290,
+      "totalCents": 2580
+    },
+    {
+      "label": "Thé glacé pêche",
+      "quantity": 1,
+      "unitPriceCents": 390,
+      "totalCents": 390
+    },
+    {
+      "label": "Sel de Guérande",
+      "quantity": 1,
+      "unitPriceCents": 450,
+      "totalCents": 450
+    },
+    {
+      "label": "Œufs frais façon grand-mère",
+      "quantity": 1,
+      "unitPriceCents": 420,
+      "totalCents": 420
+    }
+  ],
+  "discountsCents": 0,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "accents",
+    "clean"
+  ]
+}

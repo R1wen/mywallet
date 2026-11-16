@@ -1,0 +1,80 @@
+{
+  "merchant": "Carrefour",
+  "merchantRaw": "CARREFOUR MARKET 0123",
+  "date": "2026-11-14",
+  "time": "18:42",
+  "currency": "EUR",
+  "totalCents": 2887,
+  "paymentMethod": "card",
+  "vat": [
+    {
+      "rateBp": 550,
+      "baseCents": 1500,
+      "vatCents": 83
+    },
+    {
+      "rateBp": 2000,
+      "baseCents": 1087,
+      "vatCents": 217
+    }
+  ],
+  "items": [
+    {
+      "label": "LAIT DEMI ECR 1L",
+      "quantity": 2,
+      "unitPriceCents": 125,
+      "totalCents": 250
+    },
+    {
+      "label": "PAIN DE MIE COMPLET",
+      "quantity": 1,
+      "unitPriceCents": 189,
+      "totalCents": 189
+    },
+    {
+      "label": "YAOURT NATURE X8",
+      "quantity": 1,
+      "unitPriceCents": 235,
+      "totalCents": 235
+    },
+    {
+      "label": "CAFE MOULU 250G",
+      "quantity": 1,
+      "unitPriceCents": 399,
+      "totalCents": 399
+    },
+    {
+      "label": "LESSIVE LIQUIDE 2L",
+      "quantity": 1,
+      "unitPriceCents": 849,
+      "totalCents": 849
+    },
+    {
+      "label": "BANANES",
+      "quantity": 1.204,
+      "unitPriceCents": 199,
+      "totalCents": 240
+    },
+    {
+      "label": "EAU MINERALE 6X1,5L",
+      "quantity": 1,
+      "unitPriceCents": 330,
+      "totalCents": 330
+    },
+    {
+      "label": "ESSUIE TOUT X4",
+      "quantity": 1,
+      "unitPriceCents": 455,
+      "totalCents": 455
+    }
+  ],
+  "discountsCents": -60,
+  "returnDeadline": null,
+  "warrantyUntil": null,
+  "difficulty": [
+    "clean",
+    "supermarket",
+    "weighted-item",
+    "discount"
+  ]
+}
