@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 function uniqueEmail(project: string) {
-  return `e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@mywallet.test`;
+  return `e2e-${project}-${randomUUID()}@mywallet.test`;
 }
 
 test.describe("authentification", () => {
