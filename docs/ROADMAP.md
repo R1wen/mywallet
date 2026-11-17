@@ -118,7 +118,7 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] UI : Données et compte dans Réglages, exports depuis Transactions et le rapport, mode privé (œil, touche H), palette ⌘K complète (recherche), application installable (manifeste, icônes, page hors ligne)
 - [x] Audit : axe sans violation grave sur 6 écrans (dans l'e2e), mesures de performance (`docs/AUDIT.md`), dépendances (`esbuild` forcé, `fflate` 0.8.3)
 - [x] Documentation d'installation (`docs/INSTALL.md`), déploiement (`CRON_SECRET`)
-- [ ] Tests, captures, `ui-reviewer`, `/code-review`
+- [x] Tests : 707 unitaires, 158 intégration, 38 e2e ; captures (`docs/screens/sprint-8/`), `ui-reviewer`, `security-reviewer` (essais de mot de passe limités, purge atomique qui épargne une reconnexion), `/code-review` (mode privé sans flash, palette, date de Paris, ZIP, recherche dans la couche serveur)
 - [ ] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 
