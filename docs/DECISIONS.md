@@ -204,3 +204,20 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 
 - Décision (validée) : corriger la catégorie d'une dépense (saisie, modification, ticket) **propose** une règle (« Toujours classer Amazon dans Maison ? ») ; rien n'est appris sans confirmation. Règle par magasin quand il y en a un, sinon par mot-clé (jusqu'à trois mots du libellé, sans tailles ni quantités). Une seule règle par magasin ou mot-clé (la confirmer à nouveau la met à jour).
 - Ordre de résolution : catégorie choisie, puis mes règles (priorité, puis motif le plus long, mots entiers), puis la catégorie par défaut du magasin. Appliqué à la saisie, à l'import CSV (libellé bancaire) et aux lignes de ticket (mots-clés). Les revenus ne reçoivent pas de catégorie automatique. Règles visibles, désactivables et supprimables dans Réglages.
+
+## ADR-039 — Analyses : abonnements, inhabituel, prévision, simulateur
+
+- Décision (validée au Sprint 6) : tout est calculé à la demande, sans tâche planifiée.
+- **Abonnements** : au moins trois prélèvements d'un même magasin (ou libellé sans dates ni références) espacés de 25 à 35 jours, montants stables avant et après le dernier changement de prix, dernier prélèvement il y a moins de 40 jours. Une hausse est signalée. Non suivi = aucune règle récurrente active du même magasin ou libellé. « Suivre » crée la règle mensuelle à partir de la prochaine échéance ; « Ignorer » est mémorisé (`subscription_dismissals`, migration 0006).
+- **Dépense inhabituelle** : au moins 3 fois la médiane de sa catégorie sur les 6 mois précédents (5 dépenses minimum) et 30 € de plus ; les échéances récurrentes sont exclues.
+- **Prévision de fin de mois** : solde disponible (comptes courants et espèces) + échéances prévues restantes − dépenses courantes au rythme habituel (montants réellement payés, 3 mois complets), ou au rythme du mois quand l'historique manque.
+- **Simulateur « et si »** : sur la moyenne des mois complets récents (ma dépense réelle par catégorie principale) ; réduction par catégorie, abonnement ajouté ou résilié, effet sur un objectif. Rien n'est modifié.
+- **Rappels** : retour à 7 jours, garantie à 30 jours (tickets validés), sur le tableau de bord et dans Analyses.
+
+## ADR-040 — Questions en langage naturel
+
+- Décision (validée) : « le modèle traduit, le code calcule ». Le modèle choisi dans Réglages (Ollama local, ou Gemini avec consentement) reçoit la question et les noms de mes catégories et magasins, jamais un montant. Il renvoie une requête JSON (mesure, période, catégorie, magasin, regroupement) validée par Zod ; les noms sont rapprochés de mes listes, sinon la question est refusée. Le serveur calcule la réponse sur mes données avec les mêmes règles que le reste (dépense réelle, lignes de ticket, avoirs) et affiche comment la question a été comprise. Sans modèle configuré, la fonction est désactivée.
+
+## ADR-041 — Rapport mensuel
+
+- Décision (validée) : page `/analyses/rapport` du mois écoulé, imprimable, calculée à la demande ; phrases déterministes (aucun modèle) : en bref, ce qui a changé, budgets, abonnements, à surveiller, à venir. Signalée sur le tableau de bord les 7 premiers jours du mois. Export PDF au Sprint 8.

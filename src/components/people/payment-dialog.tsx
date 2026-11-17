@@ -19,7 +19,7 @@ import { toast } from "@/components/ui/toast";
 import { recordPaymentAction } from "@/lib/actions/sharing";
 import { allocatePayment } from "@/lib/domain/claims";
 import { formatDateFr } from "@/lib/domain/dates";
-import { parseAmountToCents } from "@/lib/domain/money";
+import { parseAmountToCents, centsToInput } from "@/lib/domain/money";
 
 export type OpenClaimLine = {
   claimId: string;
@@ -31,9 +31,7 @@ export type OpenClaimLine = {
   remainingCents: number;
 };
 
-/** Cents as typed in an input ("12,50"), integer arithmetic only. */
-const typed = (cents: number) =>
-  `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
+const typed = centsToInput;
 
 function PaymentForm({
   personId,

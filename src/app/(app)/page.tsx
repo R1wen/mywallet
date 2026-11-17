@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/shell/app-shell";
 import { NewTransactionButton } from "@/components/transactions/transaction-dialog";
 import { TransactionRows } from "@/components/transactions/transaction-rows";
 import { Amount } from "@/components/ui/amount";
-import { ClaimBadge } from "@/components/ui/badge";
+import { Badge, ClaimBadge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,7 @@ import {
   type MonthKey,
 } from "@/lib/domain/dates";
 import { formatCents } from "@/lib/domain/money";
+import { listDeadlines } from "@/lib/server/analytics";
 import { budgetAlerts } from "@/lib/server/budgets";
 import { getMonthDashboard } from "@/lib/server/dashboard";
 import { generateOccurrences, getResteAVivre } from "@/lib/server/recurring";
@@ -52,12 +53,16 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
   // Reste à vivre : seulement sur le mois en cours, avec les soldes déjà calculés.
   if (isCurrentMonth) await generateOccurrences(user.id, monthBounds(now.year, now.month).to);
   const d = await getMonthDashboard(user.id, month);
-  const [rav, alerts] = isCurrentMonth
+  const [rav, alerts, deadlines] = isCurrentMonth
     ? await Promise.all([
         getResteAVivre(user.id, today, undefined, { accounts: d.accounts }),
         budgetAlerts(user.id, today),
+        listDeadlines(user.id, today),
       ])
-    : [null, []];
+    : [null, [], []];
+  // Early in the month, the report of the month that just ended (ADR-041).
+  const lastMonth = shiftMonth(now.year, now.month, -1);
+  const reportReady = isCurrentMonth && Number(today.slice(8, 10)) <= 7;
   const prev = shiftMonth(month.year, month.month, -1);
   const next = shiftMonth(month.year, month.month, 1);
   const isCurrent = month.year === now.year && month.month === now.month;
@@ -144,6 +149,50 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
           {rav && <UpcomingCard rav={rav} today={today} />}
+          {reportReady && (
+            <Link
+              href={`/analyses/rapport?mois=${formatMonthKey(lastMonth)}`}
+              className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3 text-base hover:bg-surface-2"
+            >
+              <span>
+                Rapport{" "}
+                {/^[aeiouyéè]/i.test(formatMonthFr(lastMonth.year, lastMonth.month)) ? "d'" : "de "}
+                {formatMonthFr(lastMonth.year, lastMonth.month)}
+                <span className="block text-xs text-muted">
+                  Faits marquants, budgets, abonnements
+                </span>
+              </span>
+              <ChevronRight className="size-4 text-muted" aria-hidden />
+            </Link>
+          )}
+          {deadlines.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Retours et garanties</CardTitle>
+                <Link href="/analyses" className="text-sm text-muted hover:text-text">
+                  Analyses
+                </Link>
+              </CardHeader>
+              <ul className="px-4 pt-1 pb-2">
+                {deadlines.slice(0, 3).map((dl) => (
+                  <li
+                    key={`${dl.id}-${dl.kind}`}
+                    className="flex min-h-11 items-center justify-between gap-3 border-b border-border last:border-0"
+                  >
+                    <Link
+                      href={`/tickets/${dl.id}`}
+                      className="min-w-0 truncate text-base underline-offset-4 hover:underline"
+                    >
+                      {dl.kind === "return" ? "Retour" : "Garantie"} · {dl.label}
+                    </Link>
+                    <Badge tone={dl.kind === "return" ? "warning" : "muted"}>
+                      {dl.daysLeft === 0 ? "Aujourd'hui" : `${dl.daysLeft} j`}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           {d.receivables.pendingCents > 0 && (
             <Card>
               <CardHeader>

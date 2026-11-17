@@ -24,6 +24,7 @@ import {
   saveGoalAction,
 } from "@/lib/actions/budgets";
 import { buildCategoryTree } from "@/lib/domain/categories";
+import { centsToInput } from "@/lib/domain/money";
 import {
   budgetInputSchema,
   goalInputSchema,
@@ -36,9 +37,7 @@ import {
 export type CategoryOption = { id: string; parentId: string | null; name: string };
 type Option = { id: string; name: string };
 
-/** Cents as typed in an input ("12,50"), integer arithmetic only. */
-const typed = (cents: number) =>
-  `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
+const typed = centsToInput;
 
 function AmountInput(props: React.ComponentProps<typeof Input>) {
   return (

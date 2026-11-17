@@ -6,6 +6,7 @@ import {
   date,
   foreignKey,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -92,5 +93,22 @@ export const goals = pgTable(
     check("goals_target_check", sql`${t.targetCents} > 0`),
     check("goals_saved_check", sql`${t.savedCents} >= 0`),
     check("goals_name_check", sql`btrim(${t.name}) <> ''`),
+  ],
+);
+
+/**
+ * Detected subscriptions the user chose to ignore (ADR-039). `key` is the detection key
+ * (merchant id or normalized label, see `subscriptionKey`).
+ */
+export const subscriptionDismissals = pgTable(
+  "subscription_dismissals",
+  {
+    userId: ownerId(),
+    key: text().notNull(),
+    dismissedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "subscription_dismissals_pkey", columns: [t.userId, t.key] }),
+    check("subscription_dismissals_key_check", sql`char_length(${t.key}) between 3 and 300`),
   ],
 );

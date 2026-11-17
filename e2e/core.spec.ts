@@ -319,3 +319,25 @@ test.describe("budgets : enveloppes, alertes et règles", () => {
     await expect(page.getByText("Magasin Crêperie du port")).toBeVisible();
   });
 });
+
+test.describe("analyses : tendances, simulation, rapport", () => {
+  test("affiche le mois, simule une économie et ouvre le rapport", async () => {
+    await page.goto("/analyses");
+    await expect(page.getByRole("heading", { name: "Ma dépense, 12 derniers mois" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("Fin de mois prévue")).toBeVisible();
+    // Questions stay off without a configured model.
+    await expect(page.getByText(/Choisissez Ollama ou Gemini dans Réglages/)).toBeVisible();
+
+    const slider = page.getByRole("slider").first();
+    if (await slider.isVisible()) {
+      await slider.fill("50");
+      await expect(page.getByText("-50 %").first()).toBeVisible();
+    }
+
+    await page.getByRole("link", { name: "Rapport du mois" }).click();
+    await expect(page.getByRole("heading", { name: /^Rapport de / })).toBeVisible();
+    await expect(page.getByText("En bref")).toBeVisible();
+  });
+});

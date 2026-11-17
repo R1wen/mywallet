@@ -10,7 +10,7 @@ import { useCommandPalette } from "./command-palette";
 export function Topbar({ title, actions }: { title?: string; actions?: ReactNode }) {
   const palette = useCommandPalette();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-bg px-4 md:px-6 print:hidden">
       {/* Mobile : la barre latérale est masquée, la marque passe dans la barre supérieure. */}
       <Link href="/" className="flex items-center gap-2 text-base font-semibold md:hidden">
         <LogoMark />
