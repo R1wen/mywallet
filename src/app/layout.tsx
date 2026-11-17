@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { ServiceWorker } from "@/components/shell/service-worker";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
   title: { default: "myWallet", template: "%s · myWallet" },
   description: "Suivi de dépenses, tickets et créances.",
   robots: { index: false, follow: false },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "myWallet", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -40,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full">
         {children}
         <Toaster />
+        <ServiceWorker />
         <Script src="/private-mode.js" strategy="beforeInteractive" />
       </body>
     </html>
