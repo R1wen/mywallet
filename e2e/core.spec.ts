@@ -290,3 +290,31 @@ test.describe("partage : créances et remboursement", () => {
     await expect(page.getByRole("button", { name: "Enregistrer un remboursement" })).toHaveCount(0);
   });
 });
+
+test.describe("budgets : enveloppes, alertes et règles", () => {
+  test("crée une enveloppe, est prévenu au seuil, puis mémorise une règle de classement", async () => {
+    await page.goto("/budgets");
+    await page.getByRole("button", { name: "Nouveau budget" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Catégorie").selectOption({ label: "Courses" });
+    await dialog.getByLabel("Montant").fill("10");
+    await dialog.getByRole("button", { name: "Créer" }).click();
+    await expect(page.getByText("Budget créé.")).toBeVisible();
+    await expect(page.getByRole("meter", { name: "Budget Courses" })).toBeVisible();
+
+    await openNewTransaction(page);
+    await page.getByLabel("Montant").fill("9");
+    await page.getByLabel("Magasin ou site").fill("Marché du samedi");
+    await page.getByRole("dialog").getByLabel("Catégorie").selectOption({ label: "Courses" });
+    await page.getByLabel("Montant").press("Enter");
+    await expect(page.getByText(/Budget Courses : \d+ %/)).toBeVisible();
+    // A category chosen by hand for a new merchant: the app offers to remember it.
+    await page.getByRole("button", { name: "Toujours" }).click();
+    await expect(page.getByText("Règle enregistrée.")).toBeVisible();
+
+    await page.goto("/budgets");
+    await expect(page.getByText(/Seuil atteint|Dépassé/).first()).toBeVisible();
+    await page.goto("/reglages");
+    await expect(page.getByText("Magasin Marché du samedi")).toBeVisible();
+  });
+});

@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { showSaveFeedback } from "@/components/budgets/save-feedback";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import {
   type ShareDraft,
 } from "@/components/sharing/share-editor";
 import { rejectReceiptAction, validateReceipt } from "@/lib/actions/imports";
+import { matchCategory, type CategoryRule } from "@/lib/domain/categorize";
 import { buildCategoryTree } from "@/lib/domain/categories";
 import { formatDateFr } from "@/lib/domain/dates";
 import { formatCents, parseAmountToCents } from "@/lib/domain/money";
@@ -35,6 +37,8 @@ export type ReviewChoices = {
   categories: { id: string; parentId: string | null; name: string; kind: "expense" }[];
   merchants: string[];
   people: PersonOption[];
+  /** My keyword rules, to suggest each line's category (ADR-038). */
+  rules: CategoryRule[];
 };
 
 const amountText = (cents: number) => formatCents(cents, { sign: "auto" }).replace(/\s?€$/, "");
@@ -50,9 +54,15 @@ function defaults(
     label: i.label,
     quantity: String(i.quantity).replace(".", ","),
     amount: amountText(i.totalCents),
+    categoryId: matchCategory({ label: i.label, merchantId: null }, choices.rules) ?? "",
   }));
   if (p?.discountsCents) {
-    items.push({ label: "Remises", quantity: "1", amount: amountText(p.discountsCents) });
+    items.push({
+      label: "Remises",
+      quantity: "1",
+      amount: amountText(p.discountsCents),
+      categoryId: "",
+    });
   }
   const firstMatch = receipt.bankMatches[0];
   return {
@@ -140,6 +150,7 @@ export function ReviewForm({
       (attached ? "Ticket rattaché au mouvement bancaire." : "Dépense enregistrée.") +
         (parts ? ` ${parts} part${parts > 1 ? "s" : ""} à récupérer.` : ""),
     );
+    showSaveFeedback(r.data);
     router.push("/tickets");
   }
 
@@ -331,7 +342,7 @@ export function ReviewForm({
             type="button"
             size="sm"
             variant="ghost"
-            onClick={() => items.append({ label: "", quantity: "1", amount: "" })}
+            onClick={() => items.append({ label: "", quantity: "1", amount: "", categoryId: "" })}
           >
             <Plus /> Ajouter une ligne
           </Button>
@@ -343,8 +354,9 @@ export function ReviewForm({
         ))}
         {items.fields.length > 0 ? (
           <div className="overflow-hidden rounded-sm border border-border">
-            <div className="hidden grid-cols-[minmax(0,1fr)_4rem_6.5rem_2.75rem] gap-2 border-b border-border px-2 py-1.5 text-xs text-muted sm:grid">
+            <div className="hidden grid-cols-[minmax(0,1fr)_9rem_4rem_6.5rem_2.75rem] gap-2 border-b border-border px-2 py-1.5 text-xs text-muted sm:grid">
               <span>Libellé</span>
+              <span>Catégorie</span>
               <span className="text-right">Qté</span>
               <span className="text-right">Montant</span>
               <span className="sr-only">Supprimer</span>
@@ -355,7 +367,7 @@ export function ReviewForm({
                 return (
                   <li
                     key={field.id}
-                    className="grid grid-cols-[4rem_minmax(0,1fr)_2.75rem] items-center gap-2 px-2 py-2 sm:grid-cols-[minmax(0,1fr)_4rem_6.5rem_2.75rem] sm:py-1.5"
+                    className="grid grid-cols-[4rem_minmax(0,1fr)_2.75rem] items-center gap-2 px-2 py-2 sm:grid-cols-[minmax(0,1fr)_9rem_4rem_6.5rem_2.75rem] sm:py-1.5"
                   >
                     <Input
                       aria-label={`Libellé de la ligne ${index + 1}`}
@@ -364,6 +376,29 @@ export function ReviewForm({
                       autoComplete="off"
                       {...form.register(`items.${index}.label`)}
                     />
+                    <NativeSelect
+                      aria-label={`Catégorie de la ligne ${index + 1}`}
+                      className="col-span-3 sm:col-span-1"
+                      {...form.register(`items.${index}.categoryId`)}
+                    >
+                      <option value="">Comme le ticket</option>
+                      {tree.map((root) =>
+                        root.children.length ? (
+                          <optgroup key={root.id} label={root.name}>
+                            <option value={root.id}>{root.name}</option>
+                            {root.children.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : (
+                          <option key={root.id} value={root.id}>
+                            {root.name}
+                          </option>
+                        ),
+                      )}
+                    </NativeSelect>
                     <Input
                       aria-label={`Quantité de la ligne ${index + 1}`}
                       aria-invalid={Boolean(err?.quantity)}

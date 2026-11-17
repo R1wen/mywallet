@@ -11,6 +11,7 @@ vi.mock("@/lib/actions/transactions", () => ({
   removeTransaction: (...args: unknown[]) => removeTransaction(...args),
 }));
 vi.mock("@/components/ui/toast", () => ({ toast: vi.fn() }));
+vi.mock("@/components/budgets/save-feedback", () => ({ showSaveFeedback: vi.fn() }));
 
 const ACC = "0b7c5f0e-5b8e-4c1a-9a57-6b1f0b3e2a11";
 const ACC2 = "6f1d2c3b-4a5e-4f60-8a71-92b3c4d5e6f7";

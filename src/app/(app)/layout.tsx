@@ -4,6 +4,9 @@ import { MobileUserMenu } from "@/components/shell/mobile-user-menu";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/session";
+import { toParisDateString } from "@/lib/domain/dates";
+import { budgetAlerts } from "@/lib/server/budgets";
+import { cn } from "@/lib/utils";
 
 /**
  * La coquille est statique (prérendue). La session est lue sous <Suspense> :
@@ -17,6 +20,13 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <CurrentUserMenu />
         </Suspense>
       }
+      navBadges={{
+        "/budgets": (
+          <Suspense fallback={null}>
+            <BudgetAlertBadge />
+          </Suspense>
+        ),
+      }}
       topbarActions={
         <Suspense fallback={<Skeleton className="size-8 md:hidden" />}>
           <CurrentMobileUserMenu />
@@ -43,6 +53,25 @@ async function CurrentUserMenu() {
 async function CurrentMobileUserMenu() {
   const user = await requireUser();
   return <MobileUserMenu name={user.name} email={user.email} />;
+}
+
+/** Number of budgets at or past their alert threshold this month (ADR-037). */
+async function BudgetAlertBadge() {
+  const user = await requireUser();
+  const alerts = await budgetAlerts(user.id, toParisDateString(new Date()));
+  if (!alerts.length) return null;
+  const over = alerts.some((a) => a.status.level === "over");
+  return (
+    <span
+      className={cn(
+        "ml-auto rounded-sm border px-1.5 text-xs tabular-nums",
+        over ? "border-danger/40 text-danger" : "border-warning/40 text-warning",
+      )}
+    >
+      {alerts.length}
+      <span className="sr-only"> alerte{alerts.length > 1 ? "s" : ""} de budget</span>
+    </span>
+  );
 }
 
 function ContentSkeleton() {

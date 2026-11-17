@@ -22,6 +22,7 @@ import {
   type MonthKey,
 } from "@/lib/domain/dates";
 import { formatCents } from "@/lib/domain/money";
+import { budgetAlerts } from "@/lib/server/budgets";
 import { getMonthDashboard } from "@/lib/server/dashboard";
 import { generateOccurrences, getResteAVivre } from "@/lib/server/recurring";
 import { cn } from "@/lib/utils";
@@ -51,9 +52,12 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
   // Reste à vivre : seulement sur le mois en cours, avec les soldes déjà calculés.
   if (isCurrentMonth) await generateOccurrences(user.id, monthBounds(now.year, now.month).to);
   const d = await getMonthDashboard(user.id, month);
-  const rav = isCurrentMonth
-    ? await getResteAVivre(user.id, today, undefined, { accounts: d.accounts })
-    : null;
+  const [rav, alerts] = isCurrentMonth
+    ? await Promise.all([
+        getResteAVivre(user.id, today, undefined, { accounts: d.accounts }),
+        budgetAlerts(user.id, today),
+      ])
+    : [null, []];
   const prev = shiftMonth(month.year, month.month, -1);
   const next = shiftMonth(month.year, month.month, 1);
   const isCurrent = month.year === now.year && month.month === now.month;
@@ -89,6 +93,31 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
           </Link>
         )}
       </nav>
+
+      {alerts.length > 0 && (
+        <div
+          role="status"
+          className={cn(
+            "mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-4 py-2.5 text-sm",
+            alerts.some((a) => a.status.level === "over")
+              ? "border-danger/40"
+              : "border-warning/40",
+          )}
+        >
+          <span className="font-medium">Budgets</span>
+          {alerts.map((a) => (
+            <span key={a.id} className={a.status.level === "over" ? "text-danger" : "text-warning"}>
+              {a.name} {a.status.percent} %{a.status.level === "over" ? " (dépassé)" : ""}
+            </span>
+          ))}
+          <Link
+            href="/budgets"
+            className="ml-auto text-muted underline-offset-4 hover:text-text hover:underline"
+          >
+            Voir les budgets
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border lg:grid-cols-4">
         <Stat label="Solde total" hint="Tous comptes, aujourd'hui">
