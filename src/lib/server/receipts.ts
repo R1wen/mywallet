@@ -24,6 +24,7 @@ import {
   type ReceiptIssue,
   type ReviewField,
 } from "@/lib/domain/receipts/validate";
+import { matchCategory, resolveCategory } from "@/lib/domain/categorize";
 import type { OcrEngineName, ReceiptReviewInput } from "@/lib/validation/imports";
 import { OCR_FAILURE_LABELS } from "@/lib/validation/imports";
 import {
@@ -41,7 +42,8 @@ import {
 import { writeShares } from "./sharing";
 import { storage } from "./storage";
 import { structureWithModel } from "./structurers";
-import { resolveMerchant, writeTransaction } from "./transactions";
+import { loadRules } from "./rules";
+import { resolveMerchant, writeTransaction, type Correction } from "./transactions";
 
 /** What the review screen needs from an extraction (stored in `receipts.extracted`). */
 export type ReceiptExtraction = {
@@ -533,9 +535,11 @@ export async function confirmReceipt(
   id: string,
   input: ReceiptReviewInput,
   db: Db = defaultDb,
-): Promise<Result<{ transactionId: string }>> {
+): Promise<Result<{ transactionId: string; corrections: Correction[] }>> {
   try {
     return await db.transaction(async (tx) => {
+      const rules = await loadRules(userId, tx);
+      const corrections: Correction[] = [];
       const [current] = await tx
         .select({ status: receipts.status })
         .from(receipts)
@@ -581,12 +585,28 @@ export async function confirmReceipt(
           return fail("Le total du ticket diffère du mouvement bancaire.");
         }
         const merchant = await resolveMerchant(userId, input.merchantName, tx);
+        const automatic = resolveCategory(
+          {
+            explicit: null,
+            label: input.merchantName,
+            merchantId: merchant?.id ?? null,
+            merchantDefault: merchant?.defaultCategoryId ?? null,
+          },
+          rules,
+        );
+        if (input.categoryId && input.categoryId !== automatic) {
+          corrections.push({
+            merchantId: merchant?.id ?? null,
+            label: input.merchantName,
+            categoryId: input.categoryId,
+          });
+        }
         await tx
           .update(transactions)
           .set({
             label: input.merchantName,
             merchantId: merchant?.id ?? null,
-            categoryId: input.categoryId ?? merchant?.defaultCategoryId ?? null,
+            categoryId: input.categoryId ?? automatic,
             ...(input.notes ? { notes: input.notes } : {}),
           })
           .where(and(eq(transactions.userId, userId), eq(transactions.id, target.id)));
@@ -609,6 +629,7 @@ export async function confirmReceipt(
         );
         if (!written.ok) return written;
         transactionId = written.data.id;
+        if (written.data.correction) corrections.push(written.data.correction);
       }
 
       await tx
@@ -620,16 +641,37 @@ export async function confirmReceipt(
           ),
         );
       if (input.items.length) {
+        const [{ categoryId: receiptCategory = null } = {}] = await tx
+          .select({ categoryId: transactions.categoryId })
+          .from(transactions)
+          .where(and(eq(transactions.userId, userId), eq(transactions.id, transactionId)));
         await tx.insert(transactionItems).values(
-          input.items.map((item, position) => ({
-            userId,
-            transactionId,
-            position,
-            label: item.label,
-            quantity: String(item.quantity),
-            unitPriceCents: item.unitPriceCents,
-            totalCents: item.totalCents,
-          })),
+          input.items.map((item, position) => {
+            // The line's own category: chosen, else my rules, else the receipt's (null).
+            const predicted = matchCategory({ label: item.label, merchantId: null }, rules);
+            if (
+              item.categoryId &&
+              item.categoryId !== predicted &&
+              item.categoryId !== receiptCategory
+            ) {
+              corrections.push({
+                merchantId: null,
+                label: item.label,
+                categoryId: item.categoryId,
+              });
+            }
+            const categoryId = item.categoryId ?? predicted;
+            return {
+              userId,
+              transactionId,
+              position,
+              label: item.label,
+              quantity: String(item.quantity),
+              unitPriceCents: item.unitPriceCents,
+              totalCents: item.totalCents,
+              categoryId: categoryId === receiptCategory ? null : categoryId,
+            };
+          }),
         );
       }
 
@@ -649,7 +691,7 @@ export async function confirmReceipt(
           warrantyUntil: input.warrantyUntil,
         })
         .where(and(eq(receipts.userId, userId), eq(receipts.id, id)));
-      return ok({ transactionId });
+      return ok({ transactionId, corrections });
     });
   } catch (e) {
     const aborted = abortedResult(e);

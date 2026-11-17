@@ -40,6 +40,11 @@ export const receiptItemInputSchema = z
     quantity: z.string().trim(),
     /** Line total, negative for a discount line. */
     amount: z.string().trim().min(1, "Montant requis."),
+    /** Category of the line; empty = the receipt's (ADR-038). */
+    categoryId: z
+      .union([z.uuid(), z.literal("")])
+      .optional()
+      .transform((v) => v || null),
   })
   .transform((v, ctx) => {
     const quantity = v.quantity ? Number(v.quantity.replace(",", ".")) : 1;
@@ -57,6 +62,7 @@ export const receiptItemInputSchema = z
       quantity,
       unitPriceCents: Math.round(totalCents / quantity),
       totalCents,
+      categoryId: v.categoryId,
     };
   });
 

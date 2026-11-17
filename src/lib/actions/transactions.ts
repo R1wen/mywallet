@@ -12,7 +12,11 @@ import {
   getTransaction,
   updateTransaction,
   type TransactionDetail,
+  type WriteResult,
 } from "@/lib/server/transactions";
+import { alertsAfterExpense, type BudgetAlert } from "@/lib/server/budgets";
+import { proposeRules, type ProposedRule } from "@/lib/server/rules";
+import { toParisDateString } from "@/lib/domain/dates";
 import { idSchema } from "@/lib/validation/settings";
 import { transactionInputSchema, type TransactionFormValues } from "@/lib/validation/transaction";
 
@@ -60,14 +64,17 @@ export async function loadTransactionDialog(editId: unknown): Promise<{
   };
 }
 
+/** What to tell the user after saving: a rule to learn, budget thresholds crossed. */
+export type SaveFeedback = { id: string; proposals: ProposedRule[]; alerts: BudgetAlert[] };
+
 export async function saveTransaction(
   id: unknown,
   values: TransactionFormValues,
-): Promise<Result<{ id: string }>> {
+): Promise<Result<SaveFeedback>> {
   const user = await requireUser();
   const parsed = transactionInputSchema.safeParse(values);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Saisie invalide.");
-  let result: Result<{ id: string }>;
+  let result: Result<WriteResult>;
   if (id === null) {
     result = await createTransaction(user.id, parsed.data);
   } else {
@@ -75,8 +82,14 @@ export async function saveTransaction(
     if (!txId.success) return fail("Élément introuvable.");
     result = await updateTransaction(user.id, txId.data, parsed.data);
   }
-  if (result.ok) refresh();
-  return result;
+  if (!result.ok) return result;
+  refresh();
+  const correction = result.data.correction;
+  const [proposals, alerts] = await Promise.all([
+    correction ? proposeRules(user.id, [correction]) : Promise.resolve([]),
+    alertsAfterExpense(user.id, result.data.id, toParisDateString(new Date())),
+  ]);
+  return { ok: true, data: { id: result.data.id, proposals, alerts } };
 }
 
 export async function removeTransaction(id: unknown): Promise<Result> {

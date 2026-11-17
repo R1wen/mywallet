@@ -12,6 +12,7 @@ import {
 import { listAccountsWithBalance, type AccountWithBalance } from "./accounts";
 import { listCategories } from "./categories";
 import { getReceivables, othersShareSql } from "./sharing";
+import { spendingByCategory } from "./spending";
 import { listTransactions, type TransactionListRow } from "./transactions";
 
 export type CategoryShare = { id: string | null; name: string; spentCents: number };
@@ -36,7 +37,7 @@ export async function getMonthDashboard(
   db: Db = defaultDb,
 ): Promise<MonthDashboard> {
   const { from, to } = monthBounds(month.year, month.month);
-  const [accounts, rows, cats, recent, receivables] = await Promise.all([
+  const [accounts, rows, cats, recent, receivables, byCategory] = await Promise.all([
     listAccountsWithBalance(userId, db),
     db
       .select({
@@ -58,6 +59,7 @@ export async function getMonthDashboard(
       (r) => r.rows,
     ),
     getReceivables(userId, db),
+    spendingByCategory(userId, { from, to }, db),
   ]);
 
   // Spending is rolled up to the main category (two levels max, ADR-021).
@@ -66,8 +68,13 @@ export async function getMonthDashboard(
     const c = id ? byId.get(id) : undefined;
     return c ? (c.parentId ?? c.id) : null;
   };
+  // My real expense per category, receipt lines included (ADR-038).
   const shares = spendByCategory(
-    rows.map((r) => ({ ...r, categoryId: rootOf(r.categoryId) })),
+    [...byCategory].map(([categoryId, cents]) => ({
+      kind: "expense" as const,
+      amountCents: -cents,
+      categoryId: rootOf(categoryId),
+    })),
     TOP_CATEGORIES,
   );
 

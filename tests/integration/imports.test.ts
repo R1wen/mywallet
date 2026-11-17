@@ -397,7 +397,7 @@ describe("bank CSV import", () => {
         attachToTransactionId: target,
       }),
     );
-    expect(r).toEqual({ ok: true, data: { transactionId: target } });
+    expect(r).toMatchObject({ ok: true, data: { transactionId: target } });
     expect(await count()).toBe(before);
     expect(await balance()).toBe(before$);
     // The other identical payment is still free; the attached one is not offered anymore.
