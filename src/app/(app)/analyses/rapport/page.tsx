@@ -39,7 +39,8 @@ async function Report({ searchParams }: Pick<PageProps<"/analyses/rapport">, "se
       </div>
       <article className="mx-auto max-w-2xl">
         <h1 className="mb-1 text-xl font-semibold tracking-[-0.01em]">
-          Rapport de {report.monthLabel}
+          Rapport {/^[aeiouyéè]/i.test(report.monthLabel) ? "d'" : "de "}
+          {report.monthLabel}
         </h1>
         <p className="mb-6 text-base text-muted">
           Calculé à partir de vos mouvements, sur ma dépense réelle.

@@ -62,7 +62,8 @@ type Baseline = {
   goals: { id: string; name: string; remainingCents: number }[];
 };
 
-const months = (n: number | null) => (n === null ? "jamais au rythme actuel" : `${n} mois`);
+const reach = (n: number | null) =>
+  n === null ? "pas atteint au rythme actuel" : `atteint dans ${n} mois`;
 
 /** Simulator on an average month of the last three (computed in the browser, pure domain). */
 export function Simulator({ baseline }: { baseline: Baseline }) {
@@ -121,7 +122,9 @@ export function Simulator({ baseline }: { baseline: Baseline }) {
                   className="accent-[var(--accent)] pointer-coarse:h-11"
                   onChange={(e) => setCuts((s) => ({ ...s, [key]: Number(e.target.value) }))}
                 />
-                <span className="text-right text-sm text-muted tabular-nums">-{value} %</span>
+                <span className="text-right text-sm text-muted tabular-nums">
+                  {value ? `-${value} %` : "0 %"}
+                </span>
               </li>
             );
           })}
@@ -176,10 +179,12 @@ export function Simulator({ baseline }: { baseline: Baseline }) {
             </NativeSelect>
             {result.goalMonths && (
               <span className="text-muted">
-                Atteint dans {months(result.goalMonths.after)}
-                {result.goalMonths.after !== result.goalMonths.before &&
-                  ` (au lieu de ${months(result.goalMonths.before)})`}
-                .
+                <span className="inline-block first-letter:uppercase">
+                  {reach(result.goalMonths.after)}
+                  {result.goalMonths.after !== result.goalMonths.before &&
+                    ` (au lieu de : ${reach(result.goalMonths.before)})`}
+                  .
+                </span>
               </span>
             )}
           </div>

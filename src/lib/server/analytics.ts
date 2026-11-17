@@ -425,19 +425,27 @@ export async function simulationBaseline(
   const year = Number(today.slice(0, 4));
   const month = Number(today.slice(5, 7));
   const { rootOf, nameOf } = await categoryInfo(userId, db);
-  const months = [-1, -2, -3].map((d) => shiftMonth(year, month, d));
+  const [first] = await db
+    .select({ day: sql<string | null>`min(${transactions.occurredOn})` })
+    .from(transactions)
+    .where(eq(transactions.userId, userId));
+  // Only full months: a month that started before my first movement would lower the average.
+  const months = [-1, -2, -3]
+    .map((d) => shiftMonth(year, month, d))
+    .filter((m) => Boolean(first?.day && first.day <= boundsOf(m).from));
+  const count = Math.max(months.length, 1);
   const [maps, series, goalList] = await Promise.all([
     Promise.all(months.map((m) => rootSpending(userId, m, rootOf, db))),
-    monthlySeries(userId, months[0]!, 3, db),
+    months.length ? monthlySeries(userId, months[0]!, months.length, db) : Promise.resolve([]),
     listGoals(userId, today, db),
   ]);
   const total = new Map<string | null, Cents>();
   for (const map of maps) for (const [k, v] of map) total.set(k, (total.get(k) ?? 0) + v);
   return {
-    months: 3,
-    incomeCents: Math.round(series.reduce((s, p) => s + p.incomeCents, 0) / 3),
+    months: months.length,
+    incomeCents: Math.round(series.reduce((s, p) => s + p.incomeCents, 0) / count),
     categories: [...total]
-      .map(([id, cents]) => ({ id, name: nameOf(id), cents: Math.round(cents / 3) }))
+      .map(([id, cents]) => ({ id, name: nameOf(id), cents: Math.round(cents / count) }))
       .filter((c) => c.cents > 0)
       .sort((a, b) => b.cents - a.cents),
     goals: goalList

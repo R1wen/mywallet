@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 
 export type ChartPoint = { month: string; label: string; spentCents: number; incomeCents: number };
 
-const short = (label: string) => label.slice(0, 4).replace(/\.$/, "");
+const shortMonth = new Intl.DateTimeFormat("fr-FR", { month: "short", timeZone: "UTC" });
+/** "janv.", "févr.", "mai"… from "YYYY-MM". */
+const short = (month: string) => shortMonth.format(new Date(`${month}-15T12:00:00Z`));
 
 /**
  * "Ma dépense réelle" month by month (dataviz: one series, magnitude -> bars from a zero
@@ -79,7 +81,7 @@ export function MonthChart({ points, current }: { points: ChartPoint[]; current:
               i % 2 === 1 && i !== points.length - 1 && "max-sm:invisible",
             )}
           >
-            {short(p.label)}
+            {short(p.month)}
           </span>
         ))}
       </div>

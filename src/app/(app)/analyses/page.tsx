@@ -159,13 +159,13 @@ async function Analyses({ searchParams }: Pick<PageProps<"/analyses">, "searchPa
           {changes.length === 0 ? (
             <Empty>Aucune dépense ce mois-ci ni le précédent.</Empty>
           ) : (
-            <table className="w-full text-base">
+            <table className="w-full table-fixed text-base">
               <caption className="sr-only">
                 Dépenses par catégorie et écart avec le mois précédent
               </caption>
               <thead className="text-xs text-muted">
                 <tr className="border-b border-border">
-                  <th className="px-4 py-1.5 text-left font-normal">Catégorie</th>
+                  <th className="w-2/5 px-4 py-1.5 text-left font-normal">Catégorie</th>
                   <th className="px-2 py-1.5 text-right font-normal">Ce mois</th>
                   <th className="px-4 py-1.5 text-right font-normal">Écart</th>
                   <th className="px-4 py-1.5 text-right font-normal max-sm:hidden">
@@ -183,7 +183,7 @@ async function Analyses({ searchParams }: Pick<PageProps<"/analyses">, "searchPa
                     <td className="px-4 text-right whitespace-nowrap text-muted">
                       <Amount cents={c.deltaCents} className="text-muted" />
                       {c.deltaPercent !== null && c.deltaCents !== 0 && (
-                        <span className="ml-1 text-xs">
+                        <span className="ml-1 text-xs max-sm:hidden">
                           ({c.deltaPercent > 0 ? "+" : ""}
                           {c.deltaPercent} %)
                         </span>
@@ -213,7 +213,7 @@ async function Analyses({ searchParams }: Pick<PageProps<"/analyses">, "searchPa
                   key={s.key}
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 sm:min-h-11"
                 >
-                  <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex min-w-0 basis-full flex-col sm:flex-1 sm:basis-auto">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base">{s.name}</span>
                       {!s.tracked && <Badge tone="warning">Non suivi</Badge>}

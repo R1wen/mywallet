@@ -155,7 +155,9 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
               className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-surface px-4 py-3 text-base hover:bg-surface-2"
             >
               <span>
-                Rapport de {formatMonthFr(lastMonth.year, lastMonth.month)}
+                Rapport{" "}
+                {/^[aeiouyéè]/i.test(formatMonthFr(lastMonth.year, lastMonth.month)) ? "d'" : "de "}
+                {formatMonthFr(lastMonth.year, lastMonth.month)}
                 <span className="block text-xs text-muted">
                   Faits marquants, budgets, abonnements
                 </span>
