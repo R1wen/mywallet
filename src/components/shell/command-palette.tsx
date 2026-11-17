@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { CornerDownLeft, LogOut, Plus, Search } from "lucide-react";
+import { CornerDownLeft, HandCoins, LogOut, Plus, Search } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useRouter } from "next/navigation";
 import {
@@ -111,6 +111,14 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                   >
                     <Plus className="size-4" aria-hidden />
                     Importer un relevé bancaire
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="à récupérer créances remboursement dette personnes amis"
+                    onSelect={() => run(() => router.push("/personnes"))}
+                  >
+                    <HandCoins className="size-4" aria-hidden />
+                    Voir ce que l&apos;on me doit
                   </Command.Item>
                   <Command.Item
                     className={itemClass}

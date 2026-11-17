@@ -34,13 +34,25 @@ export function accountBalance(openingCents: Cents, amounts: readonly Cents[]): 
   return amounts.reduce((sum, a) => sum + a, openingCents);
 }
 
-export type FlowTx = { kind: TxKind; amountCents: Cents; categoryId: string | null };
+export type FlowTx = {
+  kind: TxKind;
+  amountCents: Cents;
+  categoryId: string | null;
+  /** Part of an expense owed by other people (claims), not my spending (ADR-032). */
+  othersShareCents?: Cents;
+};
+
+/** My real expense on a row: the purchase minus what others owe on it. */
+const myPurchase = (r: FlowTx) =>
+  r.kind === "expense" ? -r.amountCents - (r.othersShareCents ?? 0) : 0;
 
 export type FlowSummary = {
   /** Real income only (salary...), never refunds or reimbursements. */
   incomeCents: Cents;
-  /** My spending: purchases minus merchant refunds, floored at 0. Positive magnitude. */
+  /** My spending: my share of purchases minus merchant refunds, floored at 0. */
   spentCents: Cents;
+  /** Shares of my purchases owed by other people (pending, reimbursed or partly gifted). */
+  sharedCents: Cents;
   /** Money paid back by people (claims). */
   reimbursedCents: Cents;
   /** Net change on my accounts, transfers excluded. */
@@ -52,17 +64,21 @@ export function summarizeFlows(rows: readonly FlowTx[]): FlowSummary {
   let purchases = 0;
   let refunds = 0;
   let reimbursedCents = 0;
+  let sharedCents = 0;
   for (const r of rows) {
     if (r.kind === "income") incomeCents += r.amountCents;
-    else if (r.kind === "expense") purchases += -r.amountCents;
-    else if (r.kind === "refund") refunds += r.amountCents;
+    else if (r.kind === "expense") {
+      purchases += -r.amountCents;
+      sharedCents += r.othersShareCents ?? 0;
+    } else if (r.kind === "refund") refunds += r.amountCents;
     else if (r.kind === "reimbursement") reimbursedCents += r.amountCents;
   }
-  const spentCents = Math.max(0, purchases - refunds);
+  const spentCents = Math.max(0, purchases - sharedCents - refunds);
   return {
     incomeCents,
     spentCents,
     reimbursedCents,
+    sharedCents,
     netCents: incomeCents - purchases + refunds + reimbursedCents,
   };
 }
@@ -71,14 +87,15 @@ export const OTHER_CATEGORY = "__other__";
 export type CategorySpend = { categoryId: string | null; spentCents: Cents };
 
 /**
- * Spending per category (purchases minus refunds), positive totals only, largest first.
+ * Spending per category (my share of purchases minus refunds), positive totals only, largest first.
  * With `limit`, entries after the first `limit` are folded into one OTHER_CATEGORY bucket.
  */
 export function spendByCategory(rows: readonly FlowTx[], limit?: number): CategorySpend[] {
   const totals = new Map<string | null, number>();
   for (const r of rows) {
     if (r.kind !== "expense" && r.kind !== "refund") continue;
-    totals.set(r.categoryId, (totals.get(r.categoryId) ?? 0) - r.amountCents);
+    const spent = r.kind === "expense" ? myPurchase(r) : -r.amountCents;
+    totals.set(r.categoryId, (totals.get(r.categoryId) ?? 0) + spent);
   }
   const sorted = [...totals]
     .filter(([, cents]) => cents > 0)

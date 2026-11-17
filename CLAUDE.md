@@ -46,6 +46,7 @@ pnpm fixtures:receipts               # régénère les tickets synthétiques (fi
 - `src/lib/actions/` — server actions (`requireUser` + Zod + `refresh()`). `src/lib/validation/` — schémas Zod partagés formulaire/serveur. `src/lib/catalog/` — catégories et enseignes FR par défaut.
 - `src/lib/auth/` — Better Auth (serveur + client) et `requireUser()`.
 - `src/components/ui/` — primitives. `src/components/shell/` — coquille (sidebar, topbar, ⌘K). `src/components/transactions/` — saisie rapide globale (`useTransactionDialog`).
+- Partage (Sprint 4) : `src/lib/domain/claims.ts` (règles), `src/lib/server/sharing.ts` + `shares-sql.ts` (`othersShareSql` = parts des autres), `src/components/sharing/` (éditeur, dialogue Partager), `src/components/people/`, pages `/personnes`.
 - Import (Sprint 3) : `src/lib/ocr/` (client : préparation image/PDF, tesseract.js, assets servis depuis `public/vendor` copiés au `postinstall`), `src/lib/domain/receipts/` (parseur + validation), `src/lib/domain/bank-csv.ts`, `src/lib/server/{receipts,bank-import,storage,structurers}.ts`. Le serveur ne reçoit que le texte OCR brut et le reparse. Fixtures publiques synthétiques dans `fixtures/receipts/`, vrais tickets dans `fixtures/receipts-private/` (ignoré).
 - `src/app/(app)/` — écrans connectés. `src/app/(auth)/` — connexion, inscription. `src/app/design/` — vitrine dev.
 - `tests/integration/`, `e2e/`, `scripts/`, `docs/`.

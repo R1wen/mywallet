@@ -24,21 +24,24 @@ export function Badge({ className, tone, ...props }: BadgeProps) {
   return <span data-slot="badge" className={cn(badgeVariants({ tone }), className)} {...props} />;
 }
 
-export type ClaimStatus = "pending" | "reimbursed" | "gifted";
+export type { ClaimStatus } from "@/lib/domain/claims";
+import type { ClaimStatus } from "@/lib/domain/claims";
 
 const claimLabels: Record<ClaimStatus, string> = {
   pending: "À rembourser",
   reimbursed: "Remboursé",
   gifted: "Offert",
+  cancelled: "Annulé",
 };
 
 const claimTones = {
   pending: "warning",
   reimbursed: "accent",
   gifted: "muted",
+  cancelled: "muted",
 } as const satisfies Record<ClaimStatus, BadgeProps["tone"]>;
 
-/** Statuts de créance : en attente = warning, remboursé = accent, offert = muted. */
+/** Statuts de créance : en attente = warning, remboursé = accent, offert et annulé = muted. */
 export function ClaimBadge({ status, className }: { status: ClaimStatus; className?: string }) {
   return (
     <Badge tone={claimTones[status]} className={className}>

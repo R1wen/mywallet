@@ -327,7 +327,7 @@ describe("bank CSV import", () => {
       mapping: preview.data.mapping,
       decisions: [],
     });
-    expect(r).toEqual({ ok: true, data: { created: 3, linked: 1, skipped: 0 } });
+    expect(r).toEqual({ ok: true, data: { created: 3, linked: 1, skipped: 0, reimbursed: 0 } });
     // The linked movement already counted: only the 3 new lines change the balance.
     expect(await balance()).toBe(before + 210_000 - 2 * 1230);
     const [linked] = await db.select().from(transactions).where(eq(transactions.id, manual));
@@ -361,7 +361,10 @@ describe("bank CSV import", () => {
       mapping: r.data.mapping!,
       decisions: r.data.lines.map((l) => ({ row: l.row, action: "create" as const })),
     });
-    expect(commit).toEqual({ ok: true, data: { created: 0, linked: 0, skipped: 4 } });
+    expect(commit).toEqual({
+      ok: true,
+      data: { created: 0, linked: 0, skipped: 4, reimbursed: 0 },
+    });
   });
 
   it("attaches a later receipt to the imported card payment instead of a new expense", async () => {

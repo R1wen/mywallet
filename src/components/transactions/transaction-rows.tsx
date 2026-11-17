@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateFr } from "@/lib/domain/dates";
+import { formatCents } from "@/lib/domain/money";
 import type { TransactionListRow } from "@/lib/server/transactions";
 import { cn } from "@/lib/utils";
 import { useTransactionDialog } from "./transaction-dialog";
@@ -36,7 +37,14 @@ function RowLogo({ row }: { row: TransactionListRow }) {
   return <MerchantLogo name={row.label} />;
 }
 
-function KindBadge({ kind }: { kind: TransactionListRow["kind"] }) {
+function KindBadge({ kind, sharedCents }: Pick<TransactionListRow, "kind" | "sharedCents">) {
+  if (sharedCents > 0) {
+    return (
+      <Badge tone="muted" title={`Dont ${formatCents(sharedCents)} dus par d'autres`}>
+        Partagé
+      </Badge>
+    );
+  }
   if (kind === "refund") return <Badge tone="muted">Avoir</Badge>;
   if (kind === "transfer") return <Badge tone="muted">Virement</Badge>;
   if (kind === "reimbursement") return <Badge tone="muted">Remboursement</Badge>;
@@ -73,7 +81,7 @@ function LabelButton({ row, compact }: { row: TransactionListRow; compact?: bool
       <span className="flex min-w-0 flex-col">
         <span className="flex items-center gap-2">
           <span className="truncate text-base">{row.label}</span>
-          <KindBadge kind={row.kind} />
+          <KindBadge kind={row.kind} sharedCents={row.sharedCents} />
         </span>
         <span className={cn("truncate text-xs text-muted", !compact && "md:hidden")}>
           {meta[0]}

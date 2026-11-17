@@ -9,6 +9,14 @@ import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { Field, Input, NativeSelect } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import {
+  ShareEditor,
+  draftToInput,
+  emptyDraft,
+  previewClaims,
+  type PersonOption,
+  type ShareDraft,
+} from "@/components/sharing/share-editor";
 import { rejectReceiptAction, validateReceipt } from "@/lib/actions/imports";
 import { buildCategoryTree } from "@/lib/domain/categories";
 import { formatDateFr } from "@/lib/domain/dates";
@@ -26,6 +34,7 @@ export type ReviewChoices = {
   accounts: { id: string; name: string }[];
   categories: { id: string; parentId: string | null; name: string; kind: "expense" }[];
   merchants: string[];
+  people: PersonOption[];
 };
 
 const amountText = (cents: number) => formatCents(cents, { sign: "auto" }).replace(/\s?€$/, "");
@@ -85,6 +94,7 @@ export function ReviewForm({
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [share, setShare] = useState<ShareDraft>(emptyDraft);
   const form = useForm<ReceiptReviewValues, unknown, ReceiptReviewInput>({
     resolver: zodResolver(receiptReviewSchema),
     defaultValues: defaults(receipt, choices, today),
@@ -105,15 +115,31 @@ export function ReviewForm({
   const tree = buildCategoryTree(choices.categories.map((c, i) => ({ ...c, position: i })));
   const issues =
     receipt.extraction?.issues.filter((i) => i.field === "items" || i.field === "vat") ?? [];
+  const shareLines = items.fields.map((f, i) => ({
+    key: f.id,
+    label: watchedItems?.[i]?.label ?? "",
+    totalCents: parseAmountToCents(watchedItems?.[i]?.amount ?? ""),
+  }));
+  const vatCents = (receipt.extraction?.parsed?.vat ?? []).reduce((s, v) => s + v.vatCents, 0);
 
   async function onSubmit() {
     setFormError(null);
-    const r = await validateReceipt(receipt.id, form.getValues());
+    const shares = share.split
+      ? draftToInput(
+          share,
+          items.fields.map((f) => f.id),
+        )
+      : null;
+    const r = await validateReceipt(receipt.id, { ...form.getValues(), shares });
     if (!r.ok) {
       setFormError(r.error);
       return;
     }
-    toast(attached ? "Ticket rattaché au mouvement bancaire." : "Dépense enregistrée.");
+    const parts = previewClaims(share, shareLines, totalCents)?.length ?? 0;
+    toast(
+      (attached ? "Ticket rattaché au mouvement bancaire." : "Dépense enregistrée.") +
+        (parts ? ` ${parts} part${parts > 1 ? "s" : ""} à récupérer.` : ""),
+    );
     router.push("/tickets");
   }
 
@@ -393,6 +419,15 @@ export function ReviewForm({
           </p>
         ) : null}
       </section>
+
+      <ShareEditor
+        draft={share}
+        onChange={setShare}
+        people={choices.people}
+        lines={shareLines}
+        totalCents={totalCents}
+        vatCents={vatCents}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Retour possible jusqu'au" error={errors.returnDeadline?.message}>

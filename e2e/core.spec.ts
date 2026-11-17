@@ -261,3 +261,32 @@ test.describe("import : tickets et relevé", () => {
     await expect(rowWith(page, "SALAIRE ACME")).toContainText("+2 100,00");
   });
 });
+
+test.describe("partage : créances et remboursement", () => {
+  test("partage la ligne d'un ticket avec un ami puis enregistre son remboursement", async () => {
+    await page.goto("/transactions");
+    await rowWith(page, "Boulangerie Marie").getByRole("button").first().click();
+    await page.getByRole("button", { name: "Partager" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Tout est à moi ?")).toBeVisible({ timeout: 30_000 });
+    await dialog.getByText("Non, je partage").click();
+    await dialog.getByLabel("Nom d'une nouvelle personne").fill("Paul");
+    await dialog.getByRole("button", { name: "Ajouter" }).click();
+    await dialog.getByRole("button", { name: "À Paul" }).click();
+    await expect(dialog.getByText("Paul me doit")).toBeVisible();
+    await dialog.getByRole("button", { name: "Enregistrer le partage" }).click();
+    await expect(page.getByText(/Partage enregistré/)).toBeVisible();
+    // The balance keeps the full movement; the expense is now marked as shared.
+    await expect(rowWith(page, "Boulangerie Marie")).toContainText("Partagé");
+
+    await page.goto("/personnes");
+    await page.getByRole("link", { name: /Paul/ }).click();
+    await expect(page.getByRole("heading", { name: "Paul" })).toBeVisible();
+    await page.getByRole("button", { name: "Enregistrer un remboursement" }).click();
+    await expect(page.getByLabel("Montant reçu")).toHaveValue("3,50");
+    await page.getByRole("button", { name: "Enregistrer le remboursement" }).click();
+    await expect(page.getByText("Remboursement de Paul enregistré.")).toBeVisible();
+    await expect(page.getByText(/\+3,50/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enregistrer un remboursement" })).toHaveCount(0);
+  });
+});

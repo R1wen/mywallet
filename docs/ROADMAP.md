@@ -7,8 +7,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | 0      | Fondations                                                                   | `sprint/0-fondations` | [x]          |
 | 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [x]          |
 | 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [x]          |
-| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [~] en cours |
-| 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [ ]          |
+| 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [x]          |
+| 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [~] en cours |
 | 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [ ]          |
 | 6      | Analyses                                                                     | `sprint/6-analyses`   | [ ]          |
 | 7      | Foyers (optionnel, à confirmer)                                              | `sprint/7-foyers`     | [ ]          |
@@ -64,16 +64,28 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Domaine (TDD) : signature des fichiers, parseur de tickets FR, validation déterministe et confiance, doublons, CSV bancaire, rapprochement
 - [x] Fixtures : 18 tickets synthétiques (16 images, 2 PDF) avec résultats attendus et sorties OCR
 - [x] Spike OCR (`ocr-benchmarker`) : tesseract.js par défaut, PaddleOCR non livré (ADR-008, `docs/OCR-BENCHMARK.md`) ; parseur 18/18 sur total et date
-- [ ] Benchmark sur les vrais tickets (`fixtures/receipts-private/`, à déposer par l'utilisateur)
+- [ ] Benchmark sur les vrais tickets (`fixtures/receipts-private/`) : reporté à la fin du projet, à la demande de l'utilisateur
 - [x] Schéma : fichiers, rapprochement, préréglages CSV, réglages d'import (migration 0003 additive)
 - [x] Serveur : dépôt, revue, validation, rejet, import CSV, rapprochement ; isolation A/B testée
 - [x] UI : dépôt multiple et photo mobile, file des tickets, écran de revue, import CSV, réglages
 - [x] Structureurs Ollama et Gemini (désactivés sans configuration, Gemini avec consentement)
 - [x] Tests : 557 unitaires (dont non-régression du parseur sur les 18 fixtures et entrées hostiles), 90 intégration, 20 e2e (ticket lu dans le navigateur, relevé CSV)
 - [x] Captures (`docs/screens/sprint-3/`), `ui-reviewer` (2 passes), `security-reviewer` (ReDoS du parseur, appels de modèle, quotas, garde de rattachement : corrigés), `/code-review` (9 corrections)
-- [ ] Import CSV : un virement reçu qui rembourse une créance est créé en revenu (lien avec les créances au Sprint 4)
+- [x] Import CSV : un virement reçu qui rembourse une créance (fait au Sprint 4, ADR-035)
 - [x] PR #5, CI verte (alerte CodeQL corrigée)
-- [ ] Vérifier : récapitulatif, STOP
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #5 par l'utilisateur ; benchmark réel reporté à la fin du projet)
+
+## Sprint 4 : Partage de coûts et créances
+
+- [x] Décisions validées : imputation du plus ancien au plus récent, virement CSV proposé puis confirmé, annulation avec historique, centime restant pour moi (ADR-032 à 035)
+- [x] Domaine (TDD) : remises au prorata, parts égales, TVA, cycle de vie des créances, imputation, message de relance, suggestions de remboursement ; « ma dépense réelle » dans les flux
+- [x] Serveur : personnes, partage par ligne ou global (à la validation du ticket ou après), remboursements, offrir, annuler, rouvrir, annulation d'un remboursement, gardes sur les dépenses partagées, import CSV ; isolation A/B testée (aucune migration)
+- [x] UI : étape « Tout est à moi ? », dialogue Partager, Personnes et fiche (relance, remboursement), carte « À récupérer », import CSV
+- [x] Tests : 605 unitaires, 115 intégration (partiel, offert, annulation, ticket entièrement partagé), 22 e2e (attribution à un ami puis remboursement)
+- [x] Captures (`docs/screens/sprint-4/`), `ui-reviewer`
+- [x] `/code-review` (10 corrections : verrou puis relecture des paiements concurrents, total de remboursement invalide, double import, montant d'une dépense partagée, rattachement à un mouvement partagé, offre puis annulation de remboursement, personnes archivées, requêtes du tableau de bord et de l'import, prédicat de verrou dans le domaine)
+- [x] PR #6, CI verte
+- [x] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 

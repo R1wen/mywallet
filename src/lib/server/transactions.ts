@@ -26,6 +26,7 @@ import {
 import { normalizeMerchantName } from "@/lib/domain/merchant";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
+import { othersShareSql, releasePayments } from "./sharing";
 import {
   PAGE_SIZE,
   type TransactionFilters,
@@ -66,6 +67,8 @@ export type TransactionListRow = {
   /** Logo of the merchant, for <MerchantLogo>. */
   merchantLogo: MerchantLogoInfo | null;
   transferGroupId: string | null;
+  /** Part owed by other people (claims) on an expense. */
+  sharedCents: number;
 };
 
 /** `%` and `_` typed by the user are literal characters, not wildcards. */
@@ -150,6 +153,7 @@ export async function listTransactions(
       merchantHasUpload: sql<boolean>`${merchants.logoData} is not null`,
       merchantUpdatedAt: merchants.updatedAt,
       transferGroupId: transactions.transferGroupId,
+      sharedCents: othersShareSql,
     })
     .from(transactions)
     .innerJoin(
@@ -452,7 +456,32 @@ export async function updateTransaction(
         .for("update");
       if (!current) return fail(NOT_FOUND);
       if (current.kind === "reimbursement") {
-        return fail("Un remboursement se modifie depuis sa créance.");
+        return fail(
+          "Un remboursement ne se modifie pas : supprimez-le puis saisissez-le à nouveau.",
+        );
+      }
+      const [shared] = await tx
+        .select({
+          amountCents: transactions.amountCents,
+          count: sql<number>`(
+          select count(*) from claims c
+          where c.user_id = ${transactions}.user_id and c.transaction_id = ${transactions}.id
+            and c.status <> 'cancelled')`.mapWith(Number),
+        })
+        .from(transactions)
+        .where(and(eq(transactions.userId, userId), eq(transactions.id, id)));
+      if (shared && shared.count > 0) {
+        if (input.kind !== "expense") {
+          return fail(
+            "Cette dépense est partagée : retirez d'abord les parts pour changer son type.",
+          );
+        }
+        // The parts were computed from the old amount: re-share first (ADR-033).
+        if (input.amountCents !== -shared.amountCents) {
+          return fail(
+            "Cette dépense est partagée : modifiez ou retirez d'abord le partage pour changer son montant.",
+          );
+        }
       }
       if ((current.kind === "transfer") !== (input.kind === "transfer")) {
         return fail("Un virement ne peut pas changer de type : supprimez-le puis recréez-le.");
@@ -464,7 +493,11 @@ export async function updateTransaction(
   }
 }
 
-/** Deletes a transaction (both legs for a transfer); its receipt lines and pending claims cascade. */
+/**
+ * Deletes a transaction (both legs for a transfer); its receipt lines and claims without
+ * payment cascade. Deleting a reimbursement makes its claims due again; an expense whose
+ * claims received money is refused (cancel those reimbursements first).
+ */
 export async function deleteTransaction(
   userId: string,
   id: string,
@@ -477,10 +510,8 @@ export async function deleteTransaction(
         .from(transactions)
         .where(and(eq(transactions.userId, userId), eq(transactions.id, id)));
       if (!current) return fail(NOT_FOUND);
-      // Supprimer un remboursement doit remettre la créance en attente (Sprint 4).
-      if (current.kind === "reimbursement") {
-        return fail("Un remboursement s'annule depuis sa créance.");
-      }
+      // Supprimer un remboursement le retire : ses créances sont de nouveau dues (ADR-033).
+      if (current.kind === "reimbursement") await releasePayments(userId, [id], tx);
       const scope = and(
         eq(transactions.userId, userId),
         current.transferGroupId

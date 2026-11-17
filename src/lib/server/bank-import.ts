@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { and, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
-import { accounts, bankImportPresets, merchants, transactions } from "@/lib/db/schema";
+import { accounts, bankImportPresets, merchants, people, transactions } from "@/lib/db/schema";
 import {
   bankLineKeys,
   extractBankLines,
@@ -14,15 +14,22 @@ import {
   type BankLineError,
   type ColumnMapping,
 } from "@/lib/domain/bank-csv";
+import { allocatePayment, suggestReimbursements, type OpenClaim } from "@/lib/domain/claims";
 import { findMerchantByLabel } from "@/lib/domain/merchant";
 import { matchByAmountAndDate, reconcileWindow } from "@/lib/domain/reconcile";
 import { MAX_CSV_LINES, type ImportAction } from "@/lib/validation/imports";
-import { fail, ok, type Result } from "./result";
+import { Abort, abortedResult, fail, isUniqueViolation, ok, type Result } from "./result";
+import { listOpenClaims, writePayment } from "./sharing";
 
 export type PreviewLine = BankLine & {
   status: "new" | "match" | "duplicate";
   match: { id: string; label: string; occurredOn: string } | null;
+  /** Incoming transfer that probably pays back this person (ADR-035). */
+  reimbursement: { personId: string; claimId: string | null } | null;
 };
+
+/** People who owe me money: an incoming line can be recorded as their reimbursement. */
+export type DebtorOption = { id: string; name: string; pendingCents: number };
 
 export type BankPreview = {
   header: string[];
@@ -33,6 +40,7 @@ export type BankPreview = {
   lines: PreviewLine[];
   errors: BankLineError[];
   truncated: boolean;
+  debtors: DebtorOption[];
 };
 
 const hash = (key: string) => createHash("sha256").update(key).digest("hex");
@@ -48,7 +56,9 @@ export async function previewBankImport(
   userId: string,
   input: { accountId: string; csv: string; mapping: ColumnMapping | null },
   db: Conn = defaultDb,
-): Promise<Result<BankPreview & { keys: string[] }>> {
+  /** The commit needs the open claims, not the debtors' names. */
+  forCommit = false,
+): Promise<Result<BankPreview & { keys: string[]; openClaims: OpenClaim[] }>> {
   const [account] = await db
     .select({ id: accounts.id })
     .from(accounts)
@@ -75,8 +85,16 @@ export async function previewBankImport(
     mapping = preset?.mapping ?? guessMapping(header);
     fromPreset = Boolean(preset);
   }
-  const empty = { header, headerRow, mapping, fromPreset, errors: [], truncated: false };
-  if (!mapping) return ok({ ...empty, lines: [], keys: [] });
+  const empty = {
+    header,
+    headerRow,
+    mapping,
+    fromPreset,
+    errors: [],
+    truncated: false,
+    debtors: [] as DebtorOption[],
+  };
+  if (!mapping) return ok({ ...empty, lines: [], keys: [], openClaims: [] });
   if (
     Math.max(
       mapping.date,
@@ -93,7 +111,9 @@ export async function previewBankImport(
   const truncated = extracted.lines.length > MAX_CSV_LINES;
   const lines = extracted.lines.slice(0, MAX_CSV_LINES);
   const keys = bankLineKeys(input.accountId, lines).map(hash);
-  if (!lines.length) return ok({ ...empty, errors: extracted.errors, lines: [], keys: [] });
+  if (!lines.length) {
+    return ok({ ...empty, errors: extracted.errors, lines: [], keys: [], openClaims: [] });
+  }
 
   const already = new Set<string>();
   for (let i = 0; i < keys.length; i += 1000) {
@@ -137,7 +157,7 @@ export async function previewBankImport(
   const byIndex = new Map(open.map(({ i }, k) => [i, matched[k] ?? null]));
   const candById = new Map(candidates.map((c) => [c.id, c]));
 
-  const preview: PreviewLine[] = lines.map((l, i) => {
+  const base: Omit<PreviewLine, "reimbursement">[] = lines.map((l, i) => {
     if (already.has(keys[i]!)) return { ...l, status: "duplicate", match: null };
     const id = byIndex.get(i);
     const c = id ? candById.get(id) : undefined;
@@ -145,7 +165,44 @@ export async function previewBankImport(
       ? { ...l, status: "match", match: { id: c.id, label: c.label, occurredOn: c.date } }
       : { ...l, status: "new", match: null };
   });
-  return ok({ ...empty, errors: extracted.errors, lines: preview, keys, truncated });
+
+  // New incoming lines: who probably paid me back (exact amount owed, ADR-035).
+  const openClaims = await listOpenClaims(userId, db);
+  const incoming = base
+    .map((l, i) => ({ l, i }))
+    .filter(({ l }) => l.status === "new" && l.amountCents > 0);
+  const suggested = suggestReimbursements(
+    incoming.map(({ l }) => l),
+    openClaims,
+  );
+  const suggestion = new Map(incoming.map(({ i }, k) => [i, suggested[k] ?? null]));
+  const preview: PreviewLine[] = base.map((l, i) => ({
+    ...l,
+    reimbursement: suggestion.get(i) ?? null,
+  }));
+
+  const owed = new Map<string, number>();
+  for (const c of openClaims) owed.set(c.personId, (owed.get(c.personId) ?? 0) + c.remainingCents);
+  const debtors =
+    owed.size && !forCommit
+      ? (
+          await db
+            .select({ id: people.id, name: people.name })
+            .from(people)
+            .where(and(eq(people.userId, userId), inArray(people.id, [...owed.keys()])))
+        )
+          .map((p) => ({ ...p, pendingCents: owed.get(p.id) ?? 0 }))
+          .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+      : [];
+  return ok({
+    ...empty,
+    errors: extracted.errors,
+    lines: preview,
+    keys,
+    truncated,
+    debtors,
+    openClaims,
+  });
 }
 
 /** Index of the first row whose width is the most common width (2+ columns). */
@@ -158,7 +215,13 @@ function widestCommonRow(rows: readonly (readonly string[])[]): number {
   return index >= 0 ? index : 0;
 }
 
-export type ImportSummary = { created: number; linked: number; skipped: number };
+export type ImportSummary = {
+  created: number;
+  linked: number;
+  skipped: number;
+  /** Incoming transfers recorded as reimbursements. */
+  reimbursed: number;
+};
 
 /** Strips bank prefixes ("CB ", "PRLV SEPA ", card dates) for a readable label. */
 function readableLabel(bankLabel: string): string {
@@ -184,16 +247,35 @@ export async function commitBankImport(
     accountId: string;
     csv: string;
     mapping: ColumnMapping;
-    decisions: { row: number; action: ImportAction }[];
+    decisions: { row: number; action: ImportAction; personId?: string }[];
   },
   db: Db = defaultDb,
 ): Promise<Result<ImportSummary>> {
-  return db.transaction(async (tx) => {
-    const preview = await previewBankImport(userId, input, tx);
+  try {
+    return await db.transaction((tx) => writeBankImport(userId, input, tx));
+  } catch (e) {
+    const aborted = abortedResult(e);
+    if (aborted) return aborted;
+    // The same statement imported at the same time (double click, two tabs).
+    if (isUniqueViolation(e)) return fail("Ce relevé vient d'être importé : rechargez la page.");
+    throw e;
+  }
+}
+
+async function writeBankImport(
+  userId: string,
+  input: Parameters<typeof commitBankImport>[1],
+  tx: Parameters<Parameters<Db["transaction"]>[0]>[0],
+): Promise<Result<ImportSummary>> {
+  {
+    const preview = await previewBankImport(userId, input, tx, true);
     if (!preview.ok) return preview;
     const { lines, keys, header } = preview.data;
     if (!lines.length) return fail("Aucune ligne à importer.");
-    const decided = new Map(input.decisions.map((d) => [d.row, d.action]));
+    const decided = new Map(input.decisions.map((d) => [d.row, d]));
+    // What each claim still lacks, updated as transfers of this file pay them.
+    const open = preview.data.openClaims;
+    const left = new Map(open.map((c) => [c.id, c.remainingCents]));
 
     const known = await tx
       .select({
@@ -205,16 +287,64 @@ export async function commitBankImport(
       .from(merchants)
       .where(eq(merchants.userId, userId));
 
-    const summary: ImportSummary = { created: 0, linked: 0, skipped: 0 };
+    const summary: ImportSummary = { created: 0, linked: 0, skipped: 0, reimbursed: 0 };
     const toCreate: (typeof transactions.$inferInsert)[] = [];
     const toLink: { id: string; key: string; label: string }[] = [];
     for (const [i, line] of lines.entries()) {
       const key = keys[i]!;
       const fallback: ImportAction =
-        line.status === "duplicate" ? "skip" : line.status === "match" ? "link" : "create";
-      let action = decided.get(line.row) ?? fallback;
+        line.status === "duplicate"
+          ? "skip"
+          : line.status === "match"
+            ? "link"
+            : line.reimbursement
+              ? "reimburse"
+              : "create";
+      const decision = decided.get(line.row);
+      let action = decision?.action ?? fallback;
       if (line.status === "duplicate") action = "skip";
       if (action === "link" && !line.match) action = "create";
+      if (action === "reimburse" && (line.status !== "new" || line.amountCents <= 0)) {
+        action = "create";
+      }
+
+      if (action === "reimburse") {
+        const personId = decision?.personId ?? line.reimbursement?.personId;
+        if (!personId) throw new Abort(fail(`Ligne ${line.row} : choisissez la personne.`));
+        // The suggested claim while it is still exactly what is paid, else oldest first.
+        const suggestedClaim =
+          line.reimbursement?.personId === personId ? line.reimbursement.claimId : null;
+        const exact =
+          suggestedClaim && (left.get(suggestedClaim) ?? 0) === line.amountCents
+            ? open.filter((c) => c.id === suggestedClaim)
+            : [];
+        const pool = (exact.length ? exact : open.filter((c) => c.personId === personId)).map(
+          (c) => ({ id: c.id, remainingCents: left.get(c.id) ?? 0 }),
+        );
+        const allocation = allocatePayment(pool, line.amountCents);
+        if (!allocation.ok) {
+          throw new Abort(fail(`Ligne ${line.row} : ${allocation.error}`));
+        }
+        const paid = await writePayment(
+          userId,
+          {
+            personId,
+            occurredOn: line.date,
+            accountId: input.accountId,
+            allocations: allocation.data.map((a) => ({
+              claimId: a.id,
+              amountCents: a.amountCents,
+            })),
+            bankLineKey: key,
+            bankLabel: line.label,
+          },
+          tx,
+        );
+        if (!paid.ok) throw new Abort(fail(`Ligne ${line.row} : ${paid.error}`));
+        for (const a of allocation.data) left.set(a.id, (left.get(a.id) ?? 0) - a.amountCents);
+        summary.reimbursed++;
+        continue;
+      }
 
       if (action === "skip") {
         summary.skipped++;
@@ -278,5 +408,5 @@ export async function commitBankImport(
         set: { mapping: input.mapping, accountId: input.accountId },
       });
     return ok(summary);
-  });
+  }
 }

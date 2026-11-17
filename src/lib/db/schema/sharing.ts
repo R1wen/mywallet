@@ -28,9 +28,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { cents, currency, id, inList, ownerId, timestamps } from "./columns";
 import { transactionItems, transactions } from "./finance";
+import { CLAIM_STATUSES, type ClaimStatus } from "../../domain/claims";
 
-export const CLAIM_STATUSES = ["pending", "reimbursed", "gifted", "cancelled"] as const;
-export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
+export { CLAIM_STATUSES, type ClaimStatus } from "../../domain/claims";
 
 /** Someone the user shares costs with. Not an app user. */
 export const people = pgTable(
