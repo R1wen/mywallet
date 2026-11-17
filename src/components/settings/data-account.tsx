@@ -114,7 +114,10 @@ function DeleteAccount() {
       setError(r.error);
       return;
     }
+    // Signed out everywhere: close the dialog, then leave the app area.
+    setOpen(false);
     router.replace(`/connexion?suppression=${r.data.purgeOn.slice(0, 10)}`);
+    router.refresh();
   }
 
   return (
