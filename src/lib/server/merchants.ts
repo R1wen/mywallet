@@ -13,6 +13,7 @@ import { resolveLogo, type ResolvedLogo } from "@/lib/domain/logo";
 import { mergeAliases } from "@/lib/domain/merchant";
 import type { MerchantFilters, MerchantInput } from "@/lib/validation/merchant";
 import { fail, isUniqueViolation, NOT_FOUND, ok, type Result } from "./result";
+import { othersShareSql } from "./shares-sql";
 
 /** Merchant directory of one user, with spending statistics. `userId` comes from the session. */
 
@@ -42,7 +43,8 @@ export type MerchantSummary = MerchantLogoInfo & {
 
 const stats = {
   purchaseCount: sql<number>`count(${transactions.id}) filter (where ${transactions.kind} = 'expense')::int`,
-  purchasesCents: sql<string>`coalesce(sum(-${transactions.amountCents}) filter (where ${transactions.kind} = 'expense'), 0)`,
+  // My real expense (ADR-032): what other people owe on a purchase is not my spending.
+  purchasesCents: sql<string>`coalesce(sum(-${transactions.amountCents} - ${othersShareSql}) filter (where ${transactions.kind} = 'expense'), 0)`,
   refundsCents: sql<string>`coalesce(sum(${transactions.amountCents}) filter (where ${transactions.kind} = 'refund'), 0)`,
   lastPurchaseOn: sql<
     string | null

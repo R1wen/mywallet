@@ -27,6 +27,8 @@ import {
 import type { OcrEngineName, ReceiptReviewInput } from "@/lib/validation/imports";
 import { OCR_FAILURE_LABELS } from "@/lib/validation/imports";
 import {
+  Abort,
+  abortedResult,
   constraintOf,
   fail,
   isCheckViolation,
@@ -36,6 +38,7 @@ import {
   ok,
   type Result,
 } from "./result";
+import { writeShares } from "./sharing";
 import { storage } from "./storage";
 import { structureWithModel } from "./structurers";
 import { resolveMerchant, writeTransaction } from "./transactions";
@@ -620,6 +623,12 @@ export async function confirmReceipt(
         );
       }
 
+      // "Tout est à moi ?" answered no: the claims are created with the expense.
+      if (input.shares) {
+        const shared = await writeShares(userId, transactionId, input.shares, tx);
+        if (!shared.ok) throw new Abort(shared);
+      }
+
       await tx
         .update(receipts)
         .set({
@@ -633,6 +642,8 @@ export async function confirmReceipt(
       return ok({ transactionId });
     });
   } catch (e) {
+    const aborted = abortedResult(e);
+    if (aborted) return aborted;
     if (isUniqueViolation(e) && constraintOf(e) === "receipts_user_transaction_key") {
       return fail("Ce mouvement a déjà un ticket.");
     }

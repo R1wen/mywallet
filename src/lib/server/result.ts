@@ -6,6 +6,18 @@ export const fail = (error: string): { ok: false; error: string } => ({ ok: fals
 
 export const NOT_FOUND = "Élément introuvable.";
 
+/**
+ * Thrown inside `db.transaction` to roll back writes already made and return a failure
+ * (returning `fail()` from the callback would commit them). Catch with `abortedResult`.
+ */
+export class Abort extends Error {
+  constructor(readonly result: { ok: false; error: string }) {
+    super(result.error);
+  }
+}
+
+export const abortedResult = (e: unknown) => (e instanceof Abort ? e.result : null);
+
 /** The node-postgres error behind a driver error, possibly wrapped by Drizzle (`cause`). */
 function pgError(error: unknown): { code: string; constraint?: string } | undefined {
   let e: unknown = error;

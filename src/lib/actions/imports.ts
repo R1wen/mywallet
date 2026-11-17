@@ -3,7 +3,12 @@
 import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { toParisDateString } from "@/lib/domain/dates";
-import { commitBankImport, previewBankImport, type BankPreview } from "@/lib/server/bank-import";
+import {
+  commitBankImport,
+  previewBankImport,
+  type BankPreview,
+  type ImportSummary,
+} from "@/lib/server/bank-import";
 import { saveImportSettings } from "@/lib/server/import-settings";
 import {
   confirmReceipt,
@@ -108,9 +113,7 @@ export async function previewBankImportAction(input: unknown): Promise<Result<Ba
   return ok(preview);
 }
 
-export async function commitBankImportAction(
-  input: unknown,
-): Promise<Result<{ created: number; linked: number; skipped: number }>> {
+export async function commitBankImportAction(input: unknown): Promise<Result<ImportSummary>> {
   const user = await requireUser();
   const parsed = bankCommitSchema.safeParse(input);
   if (!parsed.success) return fail(firstIssue(parsed.error));

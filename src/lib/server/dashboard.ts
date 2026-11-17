@@ -11,6 +11,7 @@ import {
 } from "@/lib/domain/transactions";
 import { listAccountsWithBalance, type AccountWithBalance } from "./accounts";
 import { listCategories } from "./categories";
+import { getReceivables, othersShareSql } from "./sharing";
 import { listTransactions, type TransactionListRow } from "./transactions";
 
 export type CategoryShare = { id: string | null; name: string; spentCents: number };
@@ -22,6 +23,8 @@ export type MonthDashboard = {
   flows: FlowSummary;
   topCategories: CategoryShare[];
   recent: TransactionListRow[];
+  /** Still owed by people, all months (claims). */
+  receivables: Awaited<ReturnType<typeof getReceivables>>;
 };
 
 const TOP_CATEGORIES = 5;
@@ -33,13 +36,14 @@ export async function getMonthDashboard(
   db: Db = defaultDb,
 ): Promise<MonthDashboard> {
   const { from, to } = monthBounds(month.year, month.month);
-  const [accounts, rows, cats, recent] = await Promise.all([
+  const [accounts, rows, cats, recent, receivables] = await Promise.all([
     listAccountsWithBalance(userId, db),
     db
       .select({
         kind: transactions.kind,
         amountCents: transactions.amountCents,
         categoryId: transactions.categoryId,
+        othersShareCents: othersShareSql,
       })
       .from(transactions)
       .where(
@@ -53,6 +57,7 @@ export async function getMonthDashboard(
     listTransactions(userId, { tri: "date", ordre: "desc", page: 1, du: from, au: to }, db, 8).then(
       (r) => r.rows,
     ),
+    getReceivables(userId, db),
   ]);
 
   // Spending is rolled up to the main category (two levels max, ADR-021).
@@ -82,5 +87,6 @@ export async function getMonthDashboard(
       spentCents: s.spentCents,
     })),
     recent,
+    receivables,
   };
 }

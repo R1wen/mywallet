@@ -25,14 +25,29 @@ const STATUS: Record<
   duplicate: { label: "Déjà importé", tone: "muted" },
 };
 
-const ACTION_LABELS: Record<ImportAction, string> = {
+const ACTION_LABELS: Record<Exclude<ImportAction, "reimburse">, string> = {
   create: "Créer",
   link: "Pointer",
   skip: "Ignorer",
 };
 
-const defaultAction = (l: PreviewLine): ImportAction =>
-  l.status === "duplicate" ? "skip" : l.status === "match" ? "link" : "create";
+/** Select value: an action, or "reimburse:<personId>" for a reimbursement by that person. */
+type Choice = string;
+const REIMBURSE = "reimburse:";
+
+const defaultChoice = (l: PreviewLine): Choice =>
+  l.status === "duplicate"
+    ? "skip"
+    : l.status === "match"
+      ? "link"
+      : l.reimbursement
+        ? REIMBURSE + l.reimbursement.personId
+        : "create";
+
+const decisionOf = (row: number, choice: Choice) =>
+  choice.startsWith(REIMBURSE)
+    ? { row, action: "reimburse" as const, personId: choice.slice(REIMBURSE.length) }
+    : { row, action: choice as ImportAction };
 
 type ColumnKey = keyof ColumnMapping;
 const COLUMN_LABELS: Record<ColumnKey, string> = {
@@ -51,7 +66,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
   const [file, setFile] = useState<{ name: string; csv: string } | null>(null);
   const [preview, setPreview] = useState<BankPreview | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
-  const [actions, setActions] = useState<Record<number, ImportAction>>({});
+  const [actions, setActions] = useState<Record<number, Choice>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -69,7 +84,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
     }
     setPreview(r.data);
     setMapping(r.data.mapping);
-    setActions(Object.fromEntries(r.data.lines.map((l) => [l.row, defaultAction(l)])));
+    setActions(Object.fromEntries(r.data.lines.map((l) => [l.row, defaultChoice(l)])));
   }
 
   async function onFile(f: File | undefined) {
@@ -109,28 +124,38 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
       accountId,
       csv: file.csv,
       mapping,
-      decisions: preview.lines.map((l) => ({
-        row: l.row,
-        action: actions[l.row] ?? defaultAction(l),
-      })),
+      decisions: preview.lines.map((l) => decisionOf(l.row, actions[l.row] ?? defaultChoice(l))),
     });
     setBusy(false);
     if (!r.ok) {
       setError(r.error);
       return;
     }
-    const { created, linked, skipped } = r.data;
+    const { created, linked, skipped, reimbursed } = r.data;
+    const plural = (n: number) => (n > 1 ? "s" : "");
     toast(
-      `${created} créé${created > 1 ? "s" : ""}, ${linked} pointé${linked > 1 ? "s" : ""}, ${skipped} ignoré${skipped > 1 ? "s" : ""}.`,
+      [
+        `${created} créé${plural(created)}`,
+        `${linked} pointé${plural(linked)}`,
+        ...(reimbursed ? [`${reimbursed} remboursement${plural(reimbursed)}`] : []),
+        `${skipped} ignoré${plural(skipped)}`,
+      ].join(", ") + ".",
     );
     router.push("/transactions");
   }
 
   const counts = useMemo(() => {
-    const c = { create: 0, link: 0, skip: 0 };
-    for (const l of preview?.lines ?? []) c[actions[l.row] ?? defaultAction(l)]++;
+    const c = { create: 0, link: 0, skip: 0, reimburse: 0 };
+    for (const l of preview?.lines ?? []) {
+      c[decisionOf(l.row, actions[l.row] ?? defaultChoice(l)).action]++;
+    }
     return c;
   }, [preview, actions]);
+
+  const debtorName = useMemo(
+    () => new Map((preview?.debtors ?? []).map((d) => [d.id, d.name])),
+    [preview],
+  );
 
   if (!accounts.length) {
     return (
@@ -249,7 +274,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
               {preview.lines.map((l) => (
                 <li
                   key={l.row}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:min-h-11 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto_7rem_7rem] sm:py-1"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:min-h-11 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto_7rem_10rem] sm:py-1"
                 >
                   <span className="hidden text-sm text-muted tabular-nums sm:block">
                     {formatDateFr(l.date)}
@@ -263,6 +288,12 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                         Correspond à « {l.match.label} » du {formatDateFr(l.match.occurredOn)}
                       </span>
                     )}
+                    {l.reimbursement && (
+                      <span className="truncate text-xs text-muted">
+                        Montant dû par {debtorName.get(l.reimbursement.personId) ?? "une personne"}{" "}
+                        : remboursement proposé
+                      </span>
+                    )}
                   </span>
                   <Badge tone={STATUS[l.status].tone} className="hidden sm:inline-flex">
                     {STATUS[l.status].label}
@@ -274,12 +305,10 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                   </span>
                   <NativeSelect
                     aria-label={`Action pour la ligne du ${formatDateFr(l.date)} : ${l.label}`}
-                    value={actions[l.row] ?? defaultAction(l)}
+                    value={actions[l.row] ?? defaultChoice(l)}
                     disabled={l.status === "duplicate"}
-                    onChange={(e) =>
-                      setActions((a) => ({ ...a, [l.row]: e.target.value as ImportAction }))
-                    }
-                    className="w-28 justify-self-end sm:w-full"
+                    onChange={(e) => setActions((a) => ({ ...a, [l.row]: e.target.value }))}
+                    className="w-36 justify-self-end sm:w-full"
                   >
                     {(l.match
                       ? (["link", "create", "skip"] as const)
@@ -289,6 +318,13 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                         {ACTION_LABELS[a]}
                       </option>
                     ))}
+                    {l.status === "new" &&
+                      l.amountCents > 0 &&
+                      preview.debtors.map((d) => (
+                        <option key={d.id} value={REIMBURSE + d.id}>
+                          Remboursé par {d.name}
+                        </option>
+                      ))}
                   </NativeSelect>
                 </li>
               ))}
@@ -297,12 +333,15 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
           {preview.lines.length > 0 && (
             <CardFooter className="flex-wrap justify-between">
               <span className="text-sm text-muted">
-                {counts.create} à créer · {counts.link} à pointer · {counts.skip} ignorée
+                {counts.create} à créer · {counts.link} à pointer
+                {counts.reimburse > 0 &&
+                  ` · ${counts.reimburse} remboursement${counts.reimburse > 1 ? "s" : ""}`}{" "}
+                · {counts.skip} ignorée
                 {counts.skip > 1 ? "s" : ""}
               </span>
               <Button
                 variant="primary"
-                disabled={busy || counts.create + counts.link === 0}
+                disabled={busy || counts.create + counts.link + counts.reimburse === 0}
                 onClick={commit}
               >
                 {busy ? "Import…" : "Importer"}

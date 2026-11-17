@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isValidIsoDay } from "@/lib/domain/dates";
 import { formatCents, parseAmountToCents } from "@/lib/domain/money";
+import { sharesInputSchema } from "./sharing";
 
 export const OCR_ENGINES = ["paddle", "tesseract", "pdf-text"] as const;
 export type OcrEngineName = (typeof OCR_ENGINES)[number];
@@ -77,6 +78,8 @@ export const receiptReviewSchema = z
     warrantyUntil: optionalDay,
     /** Existing bank movement to attach the receipt to instead of creating one (ADR-028). */
     attachToTransactionId: optionalId,
+    /** "Tout est à moi ?" step: who shares the receipt (Sprint 4). Null = all mine. */
+    shares: sharesInputSchema.nullish(),
   })
   .transform((v, ctx) => {
     const totalCents = parseAmountToCents(v.amount);
@@ -94,6 +97,10 @@ export const receiptReviewSchema = z
         });
         return z.NEVER;
       }
+    }
+    if (v.shares && v.items.length && v.shares.lines.length !== v.items.length) {
+      ctx.addIssue({ code: "custom", path: ["shares"], message: "Partage incomplet." });
+      return z.NEVER;
     }
     for (const field of ["returnDeadline", "warrantyUntil"] as const) {
       const day = v[field];
@@ -113,6 +120,7 @@ export const receiptReviewSchema = z
       returnDeadline: v.returnDeadline,
       warrantyUntil: v.warrantyUntil,
       attachToTransactionId: v.attachToTransactionId,
+      shares: v.shares ?? null,
     };
   });
 
@@ -149,13 +157,21 @@ export const bankPreviewSchema = z.object({
   mapping: columnMappingSchema.nullable(),
 });
 
-export const IMPORT_ACTIONS = ["create", "link", "skip"] as const;
+/** `reimburse`: an incoming transfer paying back a person's claims (ADR-035). */
+export const IMPORT_ACTIONS = ["create", "link", "skip", "reimburse"] as const;
 export type ImportAction = (typeof IMPORT_ACTIONS)[number];
 
 export const bankCommitSchema = bankPreviewSchema.extend({
   mapping: columnMappingSchema,
   decisions: z
-    .array(z.object({ row: z.number().int().min(1), action: z.enum(IMPORT_ACTIONS) }))
+    .array(
+      z.object({
+        row: z.number().int().min(1),
+        action: z.enum(IMPORT_ACTIONS),
+        /** Person paying back, for `reimburse`. */
+        personId: z.uuid().optional(),
+      }),
+    )
     .max(MAX_CSV_LINES),
 });
 

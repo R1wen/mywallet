@@ -518,6 +518,7 @@ describe("dashboard", () => {
         incomeCents: 250000,
         spentCents: 11000,
         reimbursedCents: 0,
+        sharedCents: 0,
         netCents: 239000,
       });
       expect(d.topCategories).toEqual([
