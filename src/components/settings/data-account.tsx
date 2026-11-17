@@ -1,6 +1,6 @@
 "use client";
 
-import { strToU8, zipSync } from "fflate";
+import { strToU8, zipSync, type Zippable } from "fflate";
 import { Download, FileSpreadsheet, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,6 +19,8 @@ import {
 import { Field, Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { requestDeletionAction } from "@/lib/actions/account";
+import { toParisDateString } from "@/lib/domain/dates";
+import { UPLOAD_EXTENSIONS, type UploadType } from "@/lib/domain/files";
 
 /** Parts of the full export, in the order they are fetched (see /api/export/data). */
 const PARTS = [
@@ -42,14 +44,6 @@ const PARTS = [
   "abonnements_ignores",
 ] as const;
 
-const EXTENSIONS: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/heic": "heic",
-  "application/pdf": "pdf",
-};
-
 function download(data: Uint8Array | string, filename: string, type: string) {
   const blob = new Blob([typeof data === "string" ? data : new Uint8Array(data)], { type });
   const url = URL.createObjectURL(blob);
@@ -65,7 +59,7 @@ function download(data: Uint8Array | string, filename: string, type: string) {
  * browser so no single server response grows with the archive.
  */
 async function buildArchive(onProgress: (text: string) => void): Promise<Uint8Array> {
-  const files: Record<string, Uint8Array> = {};
+  const files: Zippable = {};
   const tickets: { id: string; mimeType: string | null }[] = [];
   for (const part of PARTS) {
     onProgress(`Export : ${part.replace(/_/g, " ")}…`);
@@ -84,8 +78,9 @@ async function buildArchive(onProgress: (text: string) => void): Promise<Uint8Ar
     onProgress(`Fichiers de tickets : ${i + 1} / ${tickets.length}…`);
     const res = await fetch(`/api/receipts/${t.id}/original`);
     if (!res.ok) continue;
-    const ext = EXTENSIONS[t.mimeType ?? ""] ?? "bin";
-    files[`tickets/${t.id}.${ext}`] = new Uint8Array(await res.arrayBuffer());
+    const ext = UPLOAD_EXTENSIONS[t.mimeType as UploadType] ?? "bin";
+    // Photos and PDF are already compressed: stored as is, without deflate.
+    files[`tickets/${t.id}.${ext}`] = [new Uint8Array(await res.arrayBuffer()), { level: 0 }];
   }
   files["LISEZMOI.txt"] = new Uint8Array(
     strToU8(
@@ -116,7 +111,7 @@ function DeleteAccount() {
     }
     // Signed out everywhere: close the dialog, then leave the app area.
     setOpen(false);
-    router.replace(`/connexion?suppression=${r.data.purgeOn.slice(0, 10)}`);
+    router.replace(`/connexion?suppression=${toParisDateString(r.data.purgeOn)}`);
     router.refresh();
   }
 
@@ -226,7 +221,7 @@ export function DataAndAccount() {
           <p className="text-sm text-muted">
             Toutes vos données (tables et fichiers de tickets) dans une archive ZIP.
           </p>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid gap-2 sm:grid-cols-[auto_auto_auto] sm:justify-start">
             <Button variant="secondary" size="sm" disabled={progress !== null} onClick={exportAll}>
               <Download aria-hidden /> Exporter toutes mes données
             </Button>

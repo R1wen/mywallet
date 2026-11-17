@@ -97,7 +97,8 @@ async function TransactionsList({
                 <a
                   key={format}
                   href={`/api/export/transactions?${exportQuery(params, format)}`}
-                  className="rounded-sm px-1.5 py-0.5 text-text underline-offset-4 hover:underline pointer-coarse:px-3 pointer-coarse:py-3"
+                  aria-label={`Exporter en ${format === "csv" ? "CSV" : "Excel"}`}
+                  className="inline-flex h-7 items-center rounded-sm border border-border px-2 text-text hover:bg-surface-2 pointer-coarse:h-11 pointer-coarse:px-3"
                 >
                   {format === "csv" ? "CSV" : "Excel"}
                 </a>

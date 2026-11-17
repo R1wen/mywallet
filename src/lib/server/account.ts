@@ -1,8 +1,9 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { verifyPassword } from "better-auth/crypto";
-import { and, eq, inArray, lte } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
-import { accountDeletions, authAccount, session, user } from "@/lib/db/schema";
+import { accountDeletions, authAccount, rateLimit, session } from "@/lib/db/schema";
 import { purgeDate } from "@/lib/domain/export";
 import { fail, ok, type Result } from "./result";
 
@@ -13,6 +14,28 @@ import { fail, ok, type Result } from "./result";
  */
 
 const WRONG_PASSWORD = "Mot de passe incorrect.";
+/** Password attempts allowed per window, like the sign-in limit (ADR-043). */
+export const DELETION_MAX_ATTEMPTS = 5;
+const DELETION_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Counts a failed password attempt for this account (Better Auth's rate_limit table);
+ * true when the account must wait before trying again.
+ */
+async function tooManyAttempts(userId: string, now: Date, db: Db, record: boolean) {
+  const key = `delete-account:${userId}`;
+  const [row] = await db.select().from(rateLimit).where(eq(rateLimit.key, key));
+  const inWindow = row && now.getTime() - row.lastRequest < DELETION_WINDOW_MS;
+  if (!record) return Boolean(inWindow && row.count >= DELETION_MAX_ATTEMPTS);
+  await db
+    .insert(rateLimit)
+    .values({ id: randomUUID(), key, count: 1, lastRequest: now.getTime() })
+    .onConflictDoUpdate({
+      target: rateLimit.key,
+      set: { count: inWindow ? row.count + 1 : 1, lastRequest: now.getTime() },
+    });
+  return false;
+}
 
 export async function requestDeletion(
   userId: string,
@@ -20,11 +43,15 @@ export async function requestDeletion(
   now = new Date(),
   db: Db = defaultDb,
 ): Promise<Result<{ purgeAfter: Date }>> {
+  if (await tooManyAttempts(userId, now, db, false)) {
+    return fail("Trop d'essais. Réessayez dans 10 minutes.");
+  }
   const [credential] = await db
     .select({ hash: authAccount.password })
     .from(authAccount)
     .where(and(eq(authAccount.userId, userId), eq(authAccount.providerId, "credential")));
   if (!credential?.hash || !(await verifyPassword({ hash: credential.hash, password }))) {
+    await tooManyAttempts(userId, now, db, true);
     return fail(WRONG_PASSWORD);
   }
   const purgeAfter = purgeDate(now);
@@ -51,21 +78,19 @@ export async function cancelDeletion(userId: string, db: Db = defaultDb): Promis
   return rows.length > 0;
 }
 
-/** Erases the accounts whose delay is over; returns how many were erased. */
+/**
+ * Erases the accounts whose delay is over, in one statement. An account with a session
+ * opened after the request is spared even if its cancellation failed: signing in again
+ * always wins. Returns how many accounts were erased.
+ */
 export async function purgeDueAccounts(now = new Date(), db: Db = defaultDb): Promise<number> {
-  const due = await db
-    .select({ userId: accountDeletions.userId })
-    .from(accountDeletions)
-    .where(lte(accountDeletions.purgeAfter, now));
-  if (!due.length) return 0;
-  const erased = await db
-    .delete(user)
-    .where(
-      inArray(
-        user.id,
-        due.map((d) => d.userId),
-      ),
-    )
-    .returning({ id: user.id });
-  return erased.length;
+  const erased = await db.execute<{ id: string }>(sql`
+    delete from "user" u
+    using account_deletions d
+    where d.user_id = u.id
+      and d.purge_after <= ${now.toISOString()}::timestamptz
+      and not exists (
+        select 1 from session s where s.user_id = u.id and s.created_at > d.requested_at)
+    returning u.id`);
+  return erased.rows.length;
 }

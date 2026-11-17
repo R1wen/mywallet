@@ -226,10 +226,11 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 
 - Décision (Sprint 8) : export complet (droit d'accès et portabilité RGPD) assemblé dans le navigateur en ZIP : une table par fichier JSON, page par page via `/api/export/data` (aucune réponse serveur ne grossit avec l'archive, compatible avec la limite des fonctions Vercel), plus les fichiers originaux des tickets. Aucun secret (mot de passe, sessions) ni colonne binaire dans les tables exportées.
 - Transactions filtrées en CSV (BOM, « ; », virgule décimale ; cellules commençant par = + - @ préfixées d'une apostrophe contre l'injection de formules) ou Excel (écrivain XLSX minimal maison sur `fflate` : texte toujours en chaîne, jamais en formule ; aucune dépendance lourde). Rapport mensuel en PDF avec `pdf-lib` et la police standard.
+- Non exportées : la file de tâches interne (`jobs`, sans contenu saisi par l'utilisateur) et la demande de suppression en cours.
 
 ## ADR-043 — Suppression du compte avec délai
 
-- Décision (validée) : mot de passe et saisie de « SUPPRIMER » ; déconnexion de toutes les sessions ; effacement 7 jours plus tard (`account_deletions`, migration 0007). Se reconnecter avant annule. La purge quotidienne (`/api/cron/purge-accounts`, Vercel Cron, `CRON_SECRET` en jeton porteur, désactivée sans secret) supprime l'utilisateur : toutes ses données et fichiers suivent par cascade. Les journaux ne contiennent qu'un nombre de comptes effacés.
+- Décision (validée) : mot de passe et saisie de « SUPPRIMER » ; déconnexion de toutes les sessions ; effacement 7 jours plus tard (`account_deletions`, migration 0007). Se reconnecter avant annule. La purge quotidienne (`/api/cron/purge-accounts`, Vercel Cron, `CRON_SECRET` en jeton porteur, désactivée sans secret) supprime l'utilisateur : toutes ses données et fichiers suivent par cascade. Les journaux ne contiennent qu'un nombre de comptes effacés. Garde-fous : 5 essais de mot de passe par 10 minutes ; purge en une requête qui épargne tout compte ayant ouvert une session après la demande (même si l'annulation a échoué).
 
 ## ADR-044 — Mode privé
 

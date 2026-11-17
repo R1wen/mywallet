@@ -6,7 +6,8 @@
  */
 
 const NEEDS_QUOTES = /[";\r\n]/;
-const FORMULA = /^[=+\-@\t\r]/;
+/** Formula starts, also after spaces and in full-width forms (NFKC folds "＝" to "="). */
+const FORMULA = /^\s*[=+\-@\t\r]/;
 
 export type CsvColumn<K extends string = string> = { key: K; label: string; amount?: boolean };
 
@@ -17,8 +18,10 @@ export function csvCell(
   if (value === null || value === undefined) return "";
   let s = String(value);
   // Our own signed amounts ("-12,50") are numbers, not formulas.
-  if (typeof value === "string" && !opts.amount && FORMULA.test(s)) s = `'${s}`;
-  return NEEDS_QUOTES.test(s) || s.startsWith("'=") ? `"${s.replace(/"/g, '""')}"` : s;
+  if (typeof value === "string" && !opts.amount && FORMULA.test(s.normalize("NFKC"))) {
+    s = `'${s}`;
+  }
+  return NEEDS_QUOTES.test(s) || /^'\s*=/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 export function toCsv<K extends string>(

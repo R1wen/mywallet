@@ -185,8 +185,9 @@ html[data-private] [data-amount]::after {
   position: absolute;
   inset: 0;
   color: var(--text-muted);
-  text-align: inherit;
-  letter-spacing: 0.08em;
+  text-align: right;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 html[data-private] [data-sensitive] {
   filter: blur(6px);

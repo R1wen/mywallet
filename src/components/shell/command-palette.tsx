@@ -110,7 +110,10 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 <Command.Input
                   autoFocus
                   value={query}
-                  onValueChange={setQuery}
+                  onValueChange={(v) => {
+                    setQuery(v);
+                    setResults(null);
+                  }}
                   placeholder="Rechercher une page, une action, un magasin…"
                   className="h-full flex-1 bg-transparent text-md text-text outline-none placeholder:text-muted"
                 />
@@ -120,6 +123,88 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 <Command.Empty className="px-2 py-6 text-center text-sm text-muted">
                   Aucun résultat.
                 </Command.Empty>
+                {results && query.trim().length >= 2 && (
+                  <>
+                    {results.transactions.length > 0 && (
+                      <Command.Group
+                        heading="Mouvements"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.transactions.map((t) => (
+                          <Command.Item
+                            key={t.id}
+                            value={`mouvement ${t.label} ${t.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => transactions.openEdit(t.id))}
+                          >
+                            <ArrowLeftRight className="size-4" aria-hidden />
+                            <span className="truncate">{t.label}</span>
+                            <span className="ml-auto flex items-center gap-3 text-xs">
+                              {formatDateFr(t.occurredOn)}
+                              <Amount cents={t.amountCents} variant="flow" className="text-sm" />
+                            </span>
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.merchants.length > 0 && (
+                      <Command.Group
+                        heading="Magasins"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.merchants.map((m) => (
+                          <Command.Item
+                            key={m.id}
+                            value={`magasin ${m.name} ${m.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => router.push(`/magasins/${m.id}`))}
+                          >
+                            <Store className="size-4" aria-hidden />
+                            {m.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.people.length > 0 && (
+                      <Command.Group
+                        heading="Personnes"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.people.map((p) => (
+                          <Command.Item
+                            key={p.id}
+                            value={`personne ${p.name} ${p.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => router.push(`/personnes/${p.id}`))}
+                          >
+                            <Users className="size-4" aria-hidden />
+                            {p.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.categories.length > 0 && (
+                      <Command.Group
+                        heading="Catégories"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.categories.map((c) => (
+                          <Command.Item
+                            key={c.id}
+                            value={`categorie ${c.name} ${c.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() =>
+                              run(() => router.push(`/transactions?categorie=${c.id}`))
+                            }
+                          >
+                            <Tag className="size-4" aria-hidden />
+                            Mouvements · {c.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                  </>
+                )}
                 <Command.Group
                   heading="Actions"
                   className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
@@ -214,88 +299,6 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                     Se déconnecter
                   </Command.Item>
                 </Command.Group>
-                {results && query.trim().length >= 2 && (
-                  <>
-                    {results.transactions.length > 0 && (
-                      <Command.Group
-                        heading="Mouvements"
-                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
-                      >
-                        {results.transactions.map((t) => (
-                          <Command.Item
-                            key={t.id}
-                            value={`mouvement ${t.label} ${t.id} ${query}`}
-                            className={itemClass}
-                            onSelect={() => run(() => transactions.openEdit(t.id))}
-                          >
-                            <ArrowLeftRight className="size-4" aria-hidden />
-                            <span className="truncate">{t.label}</span>
-                            <span className="ml-auto flex items-center gap-3 text-xs">
-                              {formatDateFr(t.occurredOn)}
-                              <Amount cents={t.amountCents} variant="flow" className="text-sm" />
-                            </span>
-                          </Command.Item>
-                        ))}
-                      </Command.Group>
-                    )}
-                    {results.merchants.length > 0 && (
-                      <Command.Group
-                        heading="Magasins"
-                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
-                      >
-                        {results.merchants.map((m) => (
-                          <Command.Item
-                            key={m.id}
-                            value={`magasin ${m.name} ${m.id} ${query}`}
-                            className={itemClass}
-                            onSelect={() => run(() => router.push(`/magasins/${m.id}`))}
-                          >
-                            <Store className="size-4" aria-hidden />
-                            {m.name}
-                          </Command.Item>
-                        ))}
-                      </Command.Group>
-                    )}
-                    {results.people.length > 0 && (
-                      <Command.Group
-                        heading="Personnes"
-                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
-                      >
-                        {results.people.map((p) => (
-                          <Command.Item
-                            key={p.id}
-                            value={`personne ${p.name} ${p.id} ${query}`}
-                            className={itemClass}
-                            onSelect={() => run(() => router.push(`/personnes/${p.id}`))}
-                          >
-                            <Users className="size-4" aria-hidden />
-                            {p.name}
-                          </Command.Item>
-                        ))}
-                      </Command.Group>
-                    )}
-                    {results.categories.length > 0 && (
-                      <Command.Group
-                        heading="Catégories"
-                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
-                      >
-                        {results.categories.map((c) => (
-                          <Command.Item
-                            key={c.id}
-                            value={`categorie ${c.name} ${c.id} ${query}`}
-                            className={itemClass}
-                            onSelect={() =>
-                              run(() => router.push(`/transactions?categorie=${c.id}`))
-                            }
-                          >
-                            <Tag className="size-4" aria-hidden />
-                            Mouvements · {c.name}
-                          </Command.Item>
-                        ))}
-                      </Command.Group>
-                    )}
-                  </>
-                )}
                 <Command.Group
                   heading="Aller à"
                   className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"

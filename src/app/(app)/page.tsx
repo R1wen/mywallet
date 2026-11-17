@@ -339,7 +339,10 @@ function Stat({
       <span className="text-lg font-medium tracking-[-0.01em] [&_[data-amount]]:text-lg max-sm:[&_[data-amount]]:text-md">
         {children}
       </span>
-      <span className="text-xs text-muted max-sm:hidden">{hint}</span>
+      {/* Hints may quote an amount: blurred in private mode. */}
+      <span className="text-xs text-muted max-sm:hidden" data-sensitive>
+        {hint}
+      </span>
     </div>
   );
 }

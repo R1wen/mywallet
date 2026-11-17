@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { ServiceWorker } from "@/components/shell/service-worker";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
@@ -40,11 +39,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Blocking on purpose: private mode must apply before the first paint (ADR-044). */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/private-mode.js" />
+      </head>
       <body className="min-h-full">
         {children}
         <Toaster />
         <ServiceWorker />
-        <Script src="/private-mode.js" strategy="beforeInteractive" />
       </body>
     </html>
   );

@@ -17,6 +17,11 @@ describe("csvCell", () => {
     expect(csvCell(value)).toBe(cell.startsWith("'=") ? `"${cell}"` : cell);
   });
 
+  it("also neutralizes formulas after spaces or in full-width characters", () => {
+    expect(csvCell("  =1+1")).toBe(`"'  =1+1"`);
+    expect(csvCell("＝SUM(A1)")).toBe("'＝SUM(A1)");
+  });
+
   it("keeps numbers and signed amounts as they are", () => {
     expect(csvCell(-1250)).toBe("-1250");
     expect(csvCell("-12,50", { amount: true })).toBe("-12,50");

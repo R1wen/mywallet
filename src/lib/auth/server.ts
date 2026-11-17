@@ -53,7 +53,13 @@ export const auth = betterAuth({
         after: async (created) => {
           await provisionUser(created.userId).catch(() => undefined);
           // Signing in again cancels a pending account deletion (ADR-043).
-          await cancelDeletion(created.userId).catch(() => undefined);
+          // A failure is logged; the purge also spares any account signed in again.
+          await cancelDeletion(created.userId).catch((e: unknown) =>
+            console.error(
+              "[account] annulation de suppression impossible",
+              e instanceof Error ? e.name : "unknown",
+            ),
+          );
         },
       },
     },

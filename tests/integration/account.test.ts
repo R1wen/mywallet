@@ -86,6 +86,50 @@ describe("account deletion with a delay", () => {
   });
 });
 
+describe("deletion safeguards", () => {
+  it("limits password attempts", async () => {
+    const id = await signUp();
+    const now = new Date("2026-11-17T10:00:00Z");
+    for (let i = 0; i < 5; i++) {
+      expect(await requestDeletion(id, "mauvais", now)).toEqual({
+        ok: false,
+        error: "Mot de passe incorrect.",
+      });
+    }
+    // Even the right password waits until the window is over.
+    expect(await requestDeletion(id, password, now)).toEqual({
+      ok: false,
+      error: "Trop d'essais. Réessayez dans 10 minutes.",
+    });
+    const later = new Date(now.getTime() + 11 * 60 * 1000);
+    expect((await requestDeletion(id, password, later)).ok).toBe(true);
+  });
+
+  it("never purges an account signed in again after the request", async () => {
+    // Simulates a failed cancellation: the deletion row stays, but a newer session exists.
+    const { db: database } = await import("@/lib/db/client");
+    const { accountDeletions: deletions } = await import("@/lib/db/schema");
+    const users = await createUsers(1);
+    const id = users[0]!;
+    await database.insert(deletions).values({
+      userId: id,
+      requestedAt: new Date("2026-11-01T00:00:00Z"),
+      purgeAfter: new Date("2026-11-08T00:00:00Z"),
+    });
+    await database.insert(session).values({
+      id: randomUUID(),
+      userId: id,
+      token: randomUUID(),
+      expiresAt: new Date("2027-01-01T00:00:00Z"),
+      createdAt: new Date("2026-11-03T00:00:00Z"),
+      updatedAt: new Date("2026-11-03T00:00:00Z"),
+    });
+    await purgeDueAccounts(new Date("2026-11-17T00:00:00Z"));
+    expect((await database.select().from(user).where(eq(user.id, id))).length).toBe(1);
+    await deleteUsers(users);
+  });
+});
+
 describe("exports", () => {
   let checking = "";
 
@@ -138,5 +182,23 @@ describe("exports", () => {
       myShareCents: -4000,
     });
     expect(await exportTransactions(B, parseTransactionFilters({}))).toEqual([]);
+  });
+});
+
+describe("palette search", () => {
+  it("finds my data only, never a reimbursement to edit", async () => {
+    const { searchMyData } = await import("@/lib/server/search");
+    const mine = await searchMyData(A, "Restaurant");
+    expect(mine.merchants.map((m) => m.name)).toContain("Restaurant du port");
+    expect(mine.transactions.length).toBe(1);
+    const theirs = await searchMyData(B, "Restaurant");
+    expect(theirs.transactions).toEqual([]);
+    expect(theirs.merchants.map((m) => m.name)).not.toContain("Restaurant du port");
+    expect(await searchMyData(A, "x")).toEqual({
+      merchants: [],
+      people: [],
+      categories: [],
+      transactions: [],
+    });
   });
 });
