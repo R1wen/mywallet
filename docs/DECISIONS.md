@@ -179,7 +179,7 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-033 — Remboursements
 
 - Décision (validée) : un remboursement crée un mouvement `reimbursement` (crédit sur n'importe quel compte, pas un revenu) et une ligne `claim_payments` par créance réglée ; la somme est plafonnée au reste dû. Un versement couvrant plusieurs créances est imputé de la plus ancienne à la plus récente, répartition modifiable avant validation.
-- Annuler un remboursement supprime son mouvement : les créances qu'il soldait repassent en attente (une offre reste une offre). Une dépense dont une créance a reçu de l'argent ne peut pas être supprimée, ni son montant descendre sous les parts dues, ni changer de type.
+- Annuler un remboursement supprime son mouvement : les créances qu'il soldait repassent en attente, y compris une créance offerte après un paiement partiel. Une dépense dont une créance a reçu de l'argent ne peut pas être supprimée ; une dépense partagée ne change ni de montant ni de type tant que le partage n'est pas modifié ou retiré.
 
 ## ADR-034 — Offrir, annuler, rouvrir
 

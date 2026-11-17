@@ -109,7 +109,7 @@ export async function previewBankImportAction(input: unknown): Promise<Result<Ba
   const r = await previewBankImport(user.id, parsed.data);
   if (!r.ok) return r;
   // Line keys stay on the server: the commit recomputes everything from the file.
-  const { keys: _keys, ...preview } = r.data;
+  const { keys: _keys, openClaims: _open, ...preview } = r.data;
   return ok(preview);
 }
 

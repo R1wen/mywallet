@@ -15,7 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { loadShareDialog, saveSharesAction } from "@/lib/actions/sharing";
-import { ME, netLineAmounts } from "@/lib/domain/claims";
+import { ME, isShareLocked, netLineAmounts } from "@/lib/domain/claims";
 import { formatDateFr } from "@/lib/domain/dates";
 import type { ShareState } from "@/lib/server/sharing";
 import { ShareEditor, draftToInput, type PersonOption, type ShareDraft } from "./share-editor";
@@ -68,9 +68,7 @@ function ShareForm({
   const [draft, setDraft] = useState(() => draftFromState(state));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const locked = state.claims.some(
-    (c) => c.paidCents > 0 || c.status === "gifted" || c.status === "reimbursed",
-  );
+  const locked = state.claims.some(isShareLocked);
 
   async function save() {
     setSaving(true);

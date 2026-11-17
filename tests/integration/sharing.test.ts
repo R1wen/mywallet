@@ -288,12 +288,10 @@ describe("receipt validated with shares", () => {
     const detail = await getPersonDetail(A, lea);
     expect(detail!.totals.giftedCents).toBe(451);
     expect(detail!.totals.pendingCents).toBe(390);
-    // Cancelling the payment keeps the gift: what it paid becomes mine too.
+    // Cancelling a reimbursement makes the claim pending again, even after a gift.
     expect(await cancelPayment(A, p.data.transactionId)).toEqual({ ok: true, data: undefined });
-    expect((await claimsOf(tx))[2]?.status).toBe("gifted");
-    expect((await spent()).spentCents).toBe(before + 951);
-    expect(await applyClaimAction(A, pizza.id, "reopen")).toEqual({ ok: true, data: undefined });
     expect((await claimsOf(tx))[2]?.status).toBe("pending");
+    expect((await spent()).spentCents).toBe(before);
   });
 
   it("cancels an unpaid claim (kept in history) and refuses a paid one", async () => {
@@ -354,9 +352,15 @@ describe("receipt validated with shares", () => {
       notes: null,
     };
     const under = await updateTransaction(A, tx, input);
-    expect(!under.ok && under.error.replace(/\s/g, " ")).toBe(
-      "Le montant ne peut pas être inférieur aux parts dues par d'autres (31,22 €).",
-    );
+    expect(under).toEqual({
+      ok: false,
+      error:
+        "Cette dépense est partagée : modifiez ou retirez d'abord le partage pour changer son montant.",
+    });
+    // Same amount: other fields can still change.
+    expect(
+      await updateTransaction(A, tx, { ...input, amountCents: 8000, label: "Pizzeria Roma" }),
+    ).toMatchObject({ ok: true });
     expect(await updateTransaction(A, tx, { ...input, kind: "income" })).toMatchObject({
       ok: false,
     });
@@ -407,6 +411,19 @@ describe("whole expense and multi-claim payment", () => {
     expect((await spent()).spentCents).toBe(before);
   });
 
+  it("keeps an archived person sharing an expense in the share choices", async () => {
+    const { listPersonOptions } = await import("@/lib/server/sharing");
+    const archived = await createPerson(A, { name: "Ancien coloc", notes: null });
+    if (!archived.ok) throw new Error(archived.error);
+    await setPersonArchived(A, archived.data.id, true);
+    expect((await listPersonOptions(A)).some((p) => p.id === archived.data.id)).toBe(false);
+    expect(
+      (await listPersonOptions(A, undefined, [archived.data.id])).some(
+        (p) => p.id === archived.data.id,
+      ),
+    ).toBe(true);
+  });
+
   it("a person with claims cannot be deleted, only archived", async () => {
     expect(await deletePerson(A, karim)).toEqual({
       ok: false,
@@ -454,6 +471,28 @@ describe("bank import of a transfer paying a claim back", () => {
       decisions: [],
     });
     expect(again).toEqual({ ok: true, data: { created: 0, linked: 0, skipped: 2, reimbursed: 0 } });
+  });
+
+  it("refuses to attach a receipt to a bank movement that is already shared", async () => {
+    const file = csv("25/10/2026;CB PIZZERIA 24/10;-80,00");
+    const r = await commitBankImport(A, { accountId: checking, csv: file, mapping, decisions: [] });
+    expect(r).toMatchObject({ ok: true, data: { created: 1 } });
+    const list = await listTransactions(A, { tri: "date", ordre: "desc", page: 1, q: "PIZZERIA" });
+    const bank = list.rows.find(
+      (row) => row.amountCents === -8000 && row.occurredOn === "2026-10-25",
+    );
+    await saveShares(A, bank!.id, { lines: [], whole: ["me", lea] });
+    const id = await receiptOf(A);
+    expect(
+      await confirmReceipt(
+        A,
+        id,
+        review({ occurredOn: "2026-10-25", attachToTransactionId: bank!.id }),
+      ),
+    ).toEqual({
+      ok: false,
+      error: "Ce mouvement est déjà partagé : retirez le partage avant d'y rattacher le ticket.",
+    });
   });
 
   it("lets the user pick the person (oldest claims first) and refuses more than owed", async () => {

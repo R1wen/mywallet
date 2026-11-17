@@ -24,7 +24,6 @@ import {
   transactions,
 } from "@/lib/db/schema";
 import { normalizeMerchantName } from "@/lib/domain/merchant";
-import { formatCents } from "@/lib/domain/money";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
 import { othersShareSql, releasePayments } from "./sharing";
@@ -463,12 +462,11 @@ export async function updateTransaction(
       }
       const [shared] = await tx
         .select({
-          others: othersShareSql,
+          amountCents: transactions.amountCents,
           count: sql<number>`(
           select count(*) from claims c
-          where c.user_id = ${transactions}.user_id and c.transaction_id = ${transactions}.id)`.mapWith(
-            Number,
-          ),
+          where c.user_id = ${transactions}.user_id and c.transaction_id = ${transactions}.id
+            and c.status <> 'cancelled')`.mapWith(Number),
         })
         .from(transactions)
         .where(and(eq(transactions.userId, userId), eq(transactions.id, id)));
@@ -478,9 +476,10 @@ export async function updateTransaction(
             "Cette dépense est partagée : retirez d'abord les parts pour changer son type.",
           );
         }
-        if (input.amountCents < shared.others) {
+        // The parts were computed from the old amount: re-share first (ADR-033).
+        if (input.amountCents !== -shared.amountCents) {
           return fail(
-            `Le montant ne peut pas être inférieur aux parts dues par d'autres (${formatCents(shared.others)}).`,
+            "Cette dépense est partagée : modifiez ou retirez d'abord le partage pour changer son montant.",
           );
         }
       }

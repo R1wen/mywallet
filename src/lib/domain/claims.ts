@@ -143,6 +143,10 @@ export function checkPayment(c: ClaimState, amountCents: Cents): string | null {
   return null;
 }
 
+/** A part that received money or was gifted can no longer be re-split or removed. */
+export const isShareLocked = (c: ClaimState) =>
+  c.paidCents > 0 || c.status === "gifted" || c.status === "reimbursed";
+
 export const canGift = (c: ClaimState) => c.status === "pending" && remainingCents(c) > 0;
 export const canCancel = (c: ClaimState) => c.status === "pending" && c.paidCents === 0;
 export const canReopen = (c: ClaimState) => c.status === "gifted" || c.status === "cancelled";

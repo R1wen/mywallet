@@ -14,11 +14,11 @@ import {
   type BankLineError,
   type ColumnMapping,
 } from "@/lib/domain/bank-csv";
-import { allocatePayment, suggestReimbursements } from "@/lib/domain/claims";
+import { allocatePayment, suggestReimbursements, type OpenClaim } from "@/lib/domain/claims";
 import { findMerchantByLabel } from "@/lib/domain/merchant";
 import { matchByAmountAndDate, reconcileWindow } from "@/lib/domain/reconcile";
 import { MAX_CSV_LINES, type ImportAction } from "@/lib/validation/imports";
-import { Abort, abortedResult, fail, ok, type Result } from "./result";
+import { Abort, abortedResult, fail, isUniqueViolation, ok, type Result } from "./result";
 import { listOpenClaims, writePayment } from "./sharing";
 
 export type PreviewLine = BankLine & {
@@ -56,7 +56,9 @@ export async function previewBankImport(
   userId: string,
   input: { accountId: string; csv: string; mapping: ColumnMapping | null },
   db: Conn = defaultDb,
-): Promise<Result<BankPreview & { keys: string[] }>> {
+  /** The commit needs the open claims, not the debtors' names. */
+  forCommit = false,
+): Promise<Result<BankPreview & { keys: string[]; openClaims: OpenClaim[] }>> {
   const [account] = await db
     .select({ id: accounts.id })
     .from(accounts)
@@ -92,7 +94,7 @@ export async function previewBankImport(
     truncated: false,
     debtors: [] as DebtorOption[],
   };
-  if (!mapping) return ok({ ...empty, lines: [], keys: [] });
+  if (!mapping) return ok({ ...empty, lines: [], keys: [], openClaims: [] });
   if (
     Math.max(
       mapping.date,
@@ -109,7 +111,9 @@ export async function previewBankImport(
   const truncated = extracted.lines.length > MAX_CSV_LINES;
   const lines = extracted.lines.slice(0, MAX_CSV_LINES);
   const keys = bankLineKeys(input.accountId, lines).map(hash);
-  if (!lines.length) return ok({ ...empty, errors: extracted.errors, lines: [], keys: [] });
+  if (!lines.length) {
+    return ok({ ...empty, errors: extracted.errors, lines: [], keys: [], openClaims: [] });
+  }
 
   const already = new Set<string>();
   for (let i = 0; i < keys.length; i += 1000) {
@@ -179,17 +183,26 @@ export async function previewBankImport(
 
   const owed = new Map<string, number>();
   for (const c of openClaims) owed.set(c.personId, (owed.get(c.personId) ?? 0) + c.remainingCents);
-  const debtors = owed.size
-    ? (
-        await db
-          .select({ id: people.id, name: people.name })
-          .from(people)
-          .where(and(eq(people.userId, userId), inArray(people.id, [...owed.keys()])))
-      )
-        .map((p) => ({ ...p, pendingCents: owed.get(p.id) ?? 0 }))
-        .sort((a, b) => a.name.localeCompare(b.name, "fr"))
-    : [];
-  return ok({ ...empty, errors: extracted.errors, lines: preview, keys, truncated, debtors });
+  const debtors =
+    owed.size && !forCommit
+      ? (
+          await db
+            .select({ id: people.id, name: people.name })
+            .from(people)
+            .where(and(eq(people.userId, userId), inArray(people.id, [...owed.keys()])))
+        )
+          .map((p) => ({ ...p, pendingCents: owed.get(p.id) ?? 0 }))
+          .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+      : [];
+  return ok({
+    ...empty,
+    errors: extracted.errors,
+    lines: preview,
+    keys,
+    truncated,
+    debtors,
+    openClaims,
+  });
 }
 
 /** Index of the first row whose width is the most common width (2+ columns). */
@@ -243,6 +256,8 @@ export async function commitBankImport(
   } catch (e) {
     const aborted = abortedResult(e);
     if (aborted) return aborted;
+    // The same statement imported at the same time (double click, two tabs).
+    if (isUniqueViolation(e)) return fail("Ce relevé vient d'être importé : rechargez la page.");
     throw e;
   }
 }
@@ -253,13 +268,13 @@ async function writeBankImport(
   tx: Parameters<Parameters<Db["transaction"]>[0]>[0],
 ): Promise<Result<ImportSummary>> {
   {
-    const preview = await previewBankImport(userId, input, tx);
+    const preview = await previewBankImport(userId, input, tx, true);
     if (!preview.ok) return preview;
     const { lines, keys, header } = preview.data;
     if (!lines.length) return fail("Aucune ligne à importer.");
     const decided = new Map(input.decisions.map((d) => [d.row, d]));
     // What each claim still lacks, updated as transfers of this file pay them.
-    const open = await listOpenClaims(userId, tx);
+    const open = preview.data.openClaims;
     const left = new Map(open.map((c) => [c.id, c.remainingCents]));
 
     const known = await tx

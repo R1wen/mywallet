@@ -556,6 +556,10 @@ export async function confirmReceipt(
               select 1 from transaction_items i
               where i.user_id = ${transactions}.user_id
                 and i.transaction_id = ${transactions}.id)`,
+            shared: sql<boolean>`exists (
+              select 1 from claims c
+              where c.user_id = ${transactions}.user_id
+                and c.transaction_id = ${transactions}.id and c.status <> 'cancelled')`,
           })
           .from(transactions)
           .where(
@@ -566,6 +570,12 @@ export async function confirmReceipt(
         // the user detailed (its lines may carry claims).
         if (!target || target.kind !== "expense" || !target.bankLineKey || target.hasItems) {
           return fail("Mouvement bancaire introuvable.");
+        }
+        // Its whole-expense shares would no longer fit an expense with lines.
+        if (target.shared) {
+          return fail(
+            "Ce mouvement est déjà partagé : retirez le partage avant d'y rattacher le ticket.",
+          );
         }
         if (target.amountCents !== -input.totalCents) {
           return fail("Le total du ticket diffère du mouvement bancaire.");

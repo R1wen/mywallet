@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { type Conn, db as defaultDb, type Db } from "@/lib/db/client";
 import {
   accounts,
@@ -16,6 +16,7 @@ import {
   canReopen,
   checkPayment,
   claimTotals,
+  isShareLocked,
   computeItemClaims,
   computeWholeClaims,
   remainingCents,
@@ -50,6 +51,26 @@ const paidSql = sql<number>`coalesce((
   select sum(p.amount_cents) from claim_payments p
   where p.user_id = ${claims}.user_id and p.claim_id = ${claims}.id), 0)`.mapWith(Number);
 
+/**
+ * Locks the claims matching `where`, then reads them in a new statement. Under READ
+ * COMMITTED a locking SELECT evaluates its subqueries with the snapshot taken before the
+ * wait, so payments committed meanwhile would be missed; the second read sees them.
+ */
+async function lockClaims(tx: Tx, where: SQL) {
+  await tx.select({ id: claims.id }).from(claims).where(where).for("update");
+  return tx
+    .select({
+      id: claims.id,
+      personId: claims.personId,
+      itemId: claims.transactionItemId,
+      amountCents: claims.amountCents,
+      status: claims.status,
+      paidCents: paidSql,
+    })
+    .from(claims)
+    .where(where);
+}
+
 /* -------------------------------------------------------------------------- */
 /* People                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -65,12 +86,19 @@ export type PersonSummary = PersonOption &
     lastExpenseOn: string | null;
   };
 
-/** People to pick when sharing (archived ones hidden). */
-export async function listPersonOptions(userId: string, db: Db = defaultDb) {
+/** People to pick when sharing: archived ones hidden unless listed in `include`. */
+export async function listPersonOptions(
+  userId: string,
+  db: Db = defaultDb,
+  include: readonly string[] = [],
+) {
+  const visible = include.length
+    ? or(isNull(people.archivedAt), inArray(people.id, [...include]))
+    : isNull(people.archivedAt);
   return db
     .select({ id: people.id, name: people.name })
     .from(people)
-    .where(and(eq(people.userId, userId), isNull(people.archivedAt)))
+    .where(and(eq(people.userId, userId), visible))
     .orderBy(asc(sql`lower(${people.name})`));
 }
 
@@ -514,18 +542,10 @@ export async function writeShares(
     if (found.length !== personIds.length) return fail("Personne introuvable.");
   }
 
-  const existing = await tx
-    .select({
-      id: claims.id,
-      personId: claims.personId,
-      itemId: claims.transactionItemId,
-      amountCents: claims.amountCents,
-      status: claims.status,
-      paidCents: paidSql,
-    })
-    .from(claims)
-    .where(and(eq(claims.userId, userId), eq(claims.transactionId, transactionId)))
-    .for("update");
+  const existing = await lockClaims(
+    tx,
+    and(eq(claims.userId, userId), eq(claims.transactionId, transactionId))!,
+  );
 
   const key = (itemId: string | null, personId: string) => `${itemId ?? ""}|${personId}`;
   const wanted = new Map(desired.map((d) => [key(d.itemId, d.personId), d]));
@@ -535,8 +555,7 @@ export async function writeShares(
     const k = key(c.itemId, c.personId);
     const d = wanted.get(k);
     wanted.delete(k);
-    const locked = c.paidCents > 0 || c.status === "gifted" || c.status === "reimbursed";
-    if (locked) {
+    if (isShareLocked(c)) {
       if (d?.amountCents !== c.amountCents) return fail(LOCKED_SHARE);
     } else if (c.status === "cancelled") {
       if (d) updates.push({ id: c.id, amountCents: d.amountCents, revive: true });
@@ -619,18 +638,10 @@ export async function writePayment(
   if (!account) return fail("Compte introuvable.");
 
   const ids = input.allocations.map((a) => a.claimId);
-  const rows = await tx
-    .select({
-      id: claims.id,
-      amountCents: claims.amountCents,
-      status: claims.status,
-      paidCents: paidSql,
-    })
-    .from(claims)
-    .where(
-      and(eq(claims.userId, userId), eq(claims.personId, input.personId), inArray(claims.id, ids)),
-    )
-    .for("update");
+  const rows = await lockClaims(
+    tx,
+    and(eq(claims.userId, userId), eq(claims.personId, input.personId), inArray(claims.id, ids))!,
+  );
   if (rows.length !== ids.length) return fail("Créance introuvable.");
   const byId = new Map(rows.map((r) => [r.id, r]));
   for (const a of input.allocations) {
@@ -691,8 +702,8 @@ export async function recordPayment(
 
 /**
  * Before deleting reimbursement movements (inside an open DB transaction): the claims
- * they paid go back to pending when they are no longer fully paid. The payment rows
- * cascade with the movement.
+ * they paid (reimbursed, or gifted after a partial payment) go back to pending when they
+ * are no longer fully paid. The payment rows cascade with the movement.
  */
 export async function releasePayments(userId: string, transactionIds: string[], tx: Tx) {
   if (!transactionIds.length) return;
@@ -730,8 +741,12 @@ export async function releasePayments(userId: string, transactionIds: string[], 
   const reopened = rows
     .filter(
       (c) =>
-        c.status === "reimbursed" &&
-        statusAfterPayments({ ...c, paidCents: c.amountCents }, c.remainingPaid) === "pending",
+        // CLAUDE.md: a cancelled reimbursement makes the claim pending again, even a gift.
+        (c.status === "reimbursed" || c.status === "gifted") &&
+        statusAfterPayments(
+          { ...c, status: "pending", paidCents: c.remainingPaid },
+          c.remainingPaid,
+        ) === "pending",
     )
     .map((c) => c.id);
   if (reopened.length) {
@@ -777,15 +792,7 @@ export async function applyClaimAction(
   db: Db = defaultDb,
 ): Promise<Result> {
   return db.transaction(async (tx) => {
-    const [c] = await tx
-      .select({
-        amountCents: claims.amountCents,
-        status: claims.status,
-        paidCents: paidSql,
-      })
-      .from(claims)
-      .where(and(eq(claims.userId, userId), eq(claims.id, claimId)))
-      .for("update");
+    const [c] = await lockClaims(tx, and(eq(claims.userId, userId), eq(claims.id, claimId))!);
     if (!c) return fail(NOT_FOUND);
     const allowed =
       action === "gift" ? canGift(c) : action === "cancel" ? canCancel(c) : canReopen(c);
@@ -836,14 +843,17 @@ export async function listOpenClaims(userId: string, db: Conn = defaultDb): Prom
 
 /** "À récupérer": total still owed and the people who owe the most. */
 export async function getReceivables(userId: string, db: Db = defaultDb, top = 3) {
-  const list = await listPeople(userId, db);
-  const owing = list
-    .filter((p) => p.pendingCents > 0)
-    .sort((a, b) => b.pendingCents - a.pendingCents || a.name.localeCompare(b.name));
+  const pending = sql<number>`sum(${claims.amountCents} - ${paidSql})`.mapWith(Number);
+  const owing = await db
+    .select({ id: people.id, name: people.name, pendingCents: pending })
+    .from(claims)
+    .innerJoin(people, and(eq(people.userId, claims.userId), eq(people.id, claims.personId)))
+    .where(and(eq(claims.userId, userId), eq(claims.status, "pending")))
+    .groupBy(people.id, people.name)
+    .orderBy(desc(pending), asc(people.name));
+  const positive = owing.filter((p) => p.pendingCents > 0);
   return {
-    pendingCents: owing.reduce((s, p) => s + p.pendingCents, 0),
-    people: owing
-      .slice(0, top)
-      .map((p) => ({ id: p.id, name: p.name, pendingCents: p.pendingCents })),
+    pendingCents: positive.reduce((s, p) => s + p.pendingCents, 0),
+    people: positive.slice(0, top),
   };
 }

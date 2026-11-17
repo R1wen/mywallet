@@ -5,6 +5,7 @@ import {
   allocateVat,
   canCancel,
   canGift,
+  isShareLocked,
   canReopen,
   checkPayment,
   claimTotals,
@@ -186,6 +187,14 @@ describe("claim state", () => {
     expect(checkPayment(claim({ paidCents: 1000 }), 2001)).toMatch(/dépasse/);
     expect(checkPayment(claim(), 0)).toMatch(/positif/);
     expect(checkPayment(claim({ status: "gifted" }), 100)).toMatch(/en attente/);
+  });
+
+  it("locks a part once paid or gifted", () => {
+    expect(isShareLocked(claim())).toBe(false);
+    expect(isShareLocked(claim({ status: "cancelled" }))).toBe(false);
+    expect(isShareLocked(claim({ paidCents: 1 }))).toBe(true);
+    expect(isShareLocked(claim({ status: "gifted" }))).toBe(true);
+    expect(isShareLocked(claim({ status: "reimbursed", paidCents: 3000 }))).toBe(true);
   });
 
   it("guards gift, cancel and reopen", () => {

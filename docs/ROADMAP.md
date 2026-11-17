@@ -81,9 +81,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Domaine (TDD) : remises au prorata, parts égales, TVA, cycle de vie des créances, imputation, message de relance, suggestions de remboursement ; « ma dépense réelle » dans les flux
 - [x] Serveur : personnes, partage par ligne ou global (à la validation du ticket ou après), remboursements, offrir, annuler, rouvrir, annulation d'un remboursement, gardes sur les dépenses partagées, import CSV ; isolation A/B testée (aucune migration)
 - [x] UI : étape « Tout est à moi ? », dialogue Partager, Personnes et fiche (relance, remboursement), carte « À récupérer », import CSV
-- [x] Tests : 604 unitaires, 115 intégration (partiel, offert, annulation, ticket entièrement partagé), 22 e2e (attribution à un ami puis remboursement)
+- [x] Tests : 605 unitaires, 115 intégration (partiel, offert, annulation, ticket entièrement partagé), 22 e2e (attribution à un ami puis remboursement)
 - [x] Captures (`docs/screens/sprint-4/`), `ui-reviewer`
-- [ ] `/code-review`
+- [x] `/code-review` (10 corrections : verrou puis relecture des paiements concurrents, total de remboursement invalide, double import, montant d'une dépense partagée, rattachement à un mouvement partagé, offre puis annulation de remboursement, personnes archivées, requêtes du tableau de bord et de l'import, prédicat de verrou dans le domaine)
 - [ ] PR, CI verte
 - [ ] Vérifier : récapitulatif, STOP
 

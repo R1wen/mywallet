@@ -81,11 +81,15 @@ export async function loadShareDialog(
   const user = await requireUser();
   const id = idSchema.safeParse(transactionId);
   if (!id.success) return null;
-  const [state, people] = await Promise.all([
-    getShareState(user.id, id.data),
-    listPersonOptions(user.id),
-  ]);
-  return state ? { state, people } : null;
+  const state = await getShareState(user.id, id.data);
+  if (!state) return null;
+  // People already sharing the expense stay listed even once archived.
+  const people = await listPersonOptions(
+    user.id,
+    undefined,
+    state.claims.map((c) => c.personId),
+  );
+  return { state, people };
 }
 
 export async function saveSharesAction(input: unknown): Promise<Result<{ claims: number }>> {

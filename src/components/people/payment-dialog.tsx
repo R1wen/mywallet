@@ -64,12 +64,18 @@ function PaymentForm({
   function changeTotal(value: string) {
     setTotal(value);
     const cents = parseAmountToCents(value);
-    if (cents === null || cents <= 0) return;
+    const clear = () => setLines(Object.fromEntries(claims.map((c) => [c.claimId, ""])));
+    if (cents === null || cents <= 0) {
+      // Never submit amounts left from an earlier keystroke.
+      clear();
+      return;
+    }
     const r = allocatePayment(
       claims.map((c) => ({ id: c.claimId, remainingCents: c.remainingCents })),
       cents,
     );
     if (!r.ok) {
+      clear();
       setError(r.error);
       return;
     }
