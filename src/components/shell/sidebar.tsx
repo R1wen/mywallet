@@ -54,7 +54,7 @@ export function SidebarView({
     <aside
       data-collapsed={collapsed}
       className={cn(
-        "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-bg md:flex",
+        "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-bg md:flex print:hidden",
         "w-60 transition-[width] duration-[var(--duration-slow)] ease-out data-[collapsed=true]:w-14",
       )}
     >

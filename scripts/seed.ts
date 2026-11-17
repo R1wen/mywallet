@@ -714,6 +714,21 @@ function reimburse(
 
 const firstOfWindowMonth = fromParts(...(parts(START).slice(0, 2) as [number, number]), 1);
 
+/* A gym membership paid monthly but not declared in Récurrent, whose price rose (Sprint 6). */
+for (const [n, cents] of [
+  [75, 2_799],
+  [45, 2_999],
+  [15, 2_999],
+] as const) {
+  addTx({
+    day: addDays(TODAY, -n),
+    kind: "expense",
+    amountCents: -cents,
+    label: "PRLV SEPA FITNESS PARK",
+    category: null,
+  });
+}
+
 const budgetRows: (typeof schema.budgets.$inferInsert)[] = [
   {
     id: uuid(),

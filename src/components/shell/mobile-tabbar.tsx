@@ -54,7 +54,7 @@ export function MobileTabbarView({ pathname }: { pathname: string | null }) {
   return (
     <nav
       aria-label="Navigation mobile"
-      className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] md:hidden print:hidden"
     >
       {left.map(renderTab)}
       <div className="flex flex-1 items-center justify-center">
