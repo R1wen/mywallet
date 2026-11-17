@@ -74,7 +74,7 @@ export async function listRules(userId: string, db: Db = defaultDb): Promise<Rul
 export async function saveRule(
   userId: string,
   rule: RuleSuggestion,
-  db: Db = defaultDb,
+  db: Conn = defaultDb,
 ): Promise<Result<{ id: string }>> {
   const pattern = rule.pattern ? normalizeText(rule.pattern) : null;
   const priority = rule.matchType === "merchant" ? MERCHANT_RULE_PRIORITY : KEYWORD_RULE_PRIORITY;

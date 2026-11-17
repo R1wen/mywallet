@@ -4,6 +4,7 @@ import { type Conn, db as defaultDb } from "@/lib/db/client";
 import { claims, transactionItems, transactions } from "@/lib/db/schema";
 import { myShareByCategory } from "@/lib/domain/categorize";
 import type { Cents } from "@/lib/domain/money";
+import { claimShareSql } from "./shares-sql";
 
 /**
  * "Ma dépense réelle" per category over a date range (ADR-032, 038): my share of each
@@ -61,13 +62,7 @@ export async function spendingByCategory(
       .select({
         transactionId: claims.transactionId,
         itemId: claims.transactionItemId,
-        // Others' share of a claim (ADR-032): pending/reimbursed in full, gifted as paid.
-        amountCents: sql<number>`case
-          when ${claims.status} in ('pending', 'reimbursed') then ${claims.amountCents}
-          when ${claims.status} = 'gifted' then coalesce((
-            select sum(p.amount_cents) from claim_payments p
-            where p.user_id = ${claims}.user_id and p.claim_id = ${claims}.id), 0)
-          else 0 end`.mapWith(Number),
+        amountCents: claimShareSql,
       })
       .from(claims)
       .innerJoin(

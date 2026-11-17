@@ -6,7 +6,7 @@
  *   the amount is exceeded.
  */
 import { daysBetweenInclusive } from "./recurrence";
-import { daysInMonth } from "./dates";
+import { monthBounds } from "./dates";
 import type { Cents } from "./money";
 
 export const BUDGET_PERIODS = ["monthly", "yearly"] as const;
@@ -14,17 +14,11 @@ export type BudgetPeriod = (typeof BUDGET_PERIODS)[number];
 export type BudgetLevel = "ok" | "warning" | "over";
 export type Bounds = { from: string; to: string };
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /** The month or the year containing `day` (YYYY-MM-DD). */
 export function periodBounds(period: BudgetPeriod, day: string): Bounds {
   const year = Number(day.slice(0, 4));
   if (period === "yearly") return { from: `${year}-01-01`, to: `${year}-12-31` };
-  const month = Number(day.slice(5, 7));
-  return {
-    from: `${year}-${pad(month)}-01`,
-    to: `${year}-${pad(month)}-${pad(daysInMonth(year, month))}`,
-  };
+  return monthBounds(year, Number(day.slice(5, 7)));
 }
 
 /** A budget counts for a period that overlaps its validity. */

@@ -13,7 +13,8 @@ import {
   updateBudget,
   updateGoal,
 } from "@/lib/server/budgets";
-import { fail, type Result } from "@/lib/server/result";
+import { db } from "@/lib/db/client";
+import { Abort, abortedResult, fail, type Result } from "@/lib/server/result";
 import { deleteRule, saveRule, setRuleActive } from "@/lib/server/rules";
 import {
   budgetInputSchema,
@@ -44,7 +45,7 @@ export async function saveBudgetAction(id: unknown, values: unknown): Promise<Re
   if (id === null) return done(createBudget(user.id, parsed.data, today()));
   const budgetId = idSchema.safeParse(id);
   if (!budgetId.success) return fail("Budget introuvable.");
-  return done(updateBudget(user.id, budgetId.data, parsed.data));
+  return done(updateBudget(user.id, budgetId.data, parsed.data, today()));
 }
 
 export async function deleteBudgetAction(id: unknown): Promise<Result> {
@@ -83,9 +84,18 @@ export async function saveRulesAction(values: unknown): Promise<Result<{ count: 
   const user = await requireUser();
   const parsed = z.array(ruleInputSchema).min(1).max(50).safeParse(values);
   if (!parsed.success) return fail("Règle invalide.");
-  for (const rule of parsed.data) {
-    const r = await saveRule(user.id, rule);
-    if (!r.ok) return r;
+  try {
+    // All or nothing: a batch is never half-saved.
+    await db.transaction(async (tx) => {
+      for (const rule of parsed.data) {
+        const r = await saveRule(user.id, rule, tx);
+        if (!r.ok) throw new Abort(r);
+      }
+    });
+  } catch (e) {
+    const aborted = abortedResult(e);
+    if (aborted) return aborted;
+    throw e;
   }
   refresh();
   return { ok: true, data: { count: parsed.data.length } };

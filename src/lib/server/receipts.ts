@@ -660,7 +660,8 @@ export async function confirmReceipt(
                 categoryId: item.categoryId,
               });
             }
-            const categoryId = item.categoryId ?? predicted;
+            // The form prefills my rules' suggestion: null means "comme le ticket".
+            const categoryId = item.categoryId;
             return {
               userId,
               transactionId,

@@ -83,7 +83,10 @@ export async function validateReceipt(
   refresh();
   const [proposals, alerts] = await Promise.all([
     proposeRules(user.id, r.data.corrections),
-    alertsAfterExpense(user.id, r.data.transactionId, toParisDateString(new Date())),
+    // Attached to an imported bank line: the expense was already counted.
+    parsed.data.attachToTransactionId
+      ? Promise.resolve([])
+      : alertsAfterExpense(user.id, r.data.transactionId, toParisDateString(new Date())),
   ]);
   return { ok: true, data: { transactionId: r.data.transactionId, proposals, alerts } };
 }

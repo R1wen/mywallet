@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "budgets_user_category_period_open_key" ON "budgets" USING btree ("user_id",coalesce("category_id", '00000000-0000-0000-0000-000000000000'::uuid),"period") WHERE "budgets"."ends_on" is null;

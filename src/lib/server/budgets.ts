@@ -1,7 +1,8 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db as defaultDb, type Db } from "@/lib/db/client";
-import { budgets, categories, goals, transactions } from "@/lib/db/schema";
+import { accounts, budgets, categories, goals, transactions } from "@/lib/db/schema";
 import {
   budgetActive,
   budgetStatus,
@@ -77,16 +78,21 @@ export async function listBudgets(
   ]);
   const parentOf = new Map(cats.map((c) => [c.id, c.parentId]));
   const nameOf = new Map(cats.map((c) => [c.id, c.name]));
-  const spentByPeriod = new Map<BudgetPeriod, Map<string | null, number>>();
+  const active = rows.filter((b) => budgetActive(b, periodBounds(b.period, day)));
+  const periods = [...new Set(active.map((b) => b.period))];
+  // One computation per period, monthly and yearly in parallel.
+  const spentByPeriod = new Map<BudgetPeriod, Map<string | null, number>>(
+    await Promise.all(
+      periods.map(
+        async (period) =>
+          [period, await spendingByCategory(userId, periodBounds(period, day), db)] as const,
+      ),
+    ),
+  );
   const views: BudgetView[] = [];
-  for (const b of rows) {
+  for (const b of active) {
     const bounds = periodBounds(b.period, day);
-    if (!budgetActive(b, bounds)) continue;
-    let spent = spentByPeriod.get(b.period);
-    if (!spent) {
-      spent = await spendingByCategory(userId, bounds, db);
-      spentByPeriod.set(b.period, spent);
-    }
+    const spent = spentByPeriod.get(b.period)!;
     const spentCents = spentInScope(b.categoryId, spent, parentOf);
     const current = today >= bounds.from && today <= bounds.to;
     views.push({
@@ -115,10 +121,13 @@ export async function listBudgets(
   );
 }
 
-/** Budgets at or past their alert threshold this period (dashboard, sidebar badge). */
-export async function budgetAlerts(userId: string, today: string, db: Db = defaultDb) {
-  return (await listBudgets(userId, today, today, db)).filter((b) => b.status.level !== "ok");
-}
+/**
+ * Budgets at or past their alert threshold this period (dashboard, sidebar badge),
+ * computed once per request (React cache).
+ */
+export const budgetAlerts = cache(async (userId: string, today: string) =>
+  (await listBudgets(userId, today, today)).filter((b) => b.status.level !== "ok"),
+);
 
 export type BudgetAlert = { name: string; level: BudgetLevel; percent: number };
 
@@ -207,11 +216,17 @@ export async function updateBudget(
   userId: string,
   id: string,
   input: BudgetInput,
+  today: string,
   db: Db = defaultDb,
 ): Promise<Result> {
   const error = await checkCategory(userId, input.categoryId, db);
   if (error) return fail(error);
   try {
+    const [current] = await db
+      .select({ period: budgets.period })
+      .from(budgets)
+      .where(and(eq(budgets.userId, userId), eq(budgets.id, id)));
+    if (!current) return fail(NOT_FOUND);
     const rows = await db
       .update(budgets)
       .set({
@@ -219,6 +234,10 @@ export async function updateBudget(
         period: input.period,
         amountCents: input.amount,
         alertPercent: input.alertPercent,
+        // A new period starts now: the old start belongs to the old period.
+        ...(current.period !== input.period
+          ? { startsOn: periodBounds(input.period, today).from }
+          : {}),
       })
       .where(and(eq(budgets.userId, userId), eq(budgets.id, id)))
       .returning({ id: budgets.id });
@@ -287,8 +306,11 @@ export async function listGoals(userId: string, today: string, db: Db = defaultD
 
 async function checkAccount(userId: string, accountId: string | null, db: Db) {
   if (!accountId) return null;
-  const owned = await listAccountsWithBalance(userId, db);
-  return owned.some((a) => a.id === accountId) ? null : "Compte introuvable.";
+  const [owned] = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(and(eq(accounts.userId, userId), eq(accounts.id, accountId)));
+  return owned ? null : "Compte introuvable.";
 }
 
 export async function createGoal(

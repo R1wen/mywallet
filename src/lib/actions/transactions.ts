@@ -87,7 +87,10 @@ export async function saveTransaction(
   const correction = result.data.correction;
   const [proposals, alerts] = await Promise.all([
     correction ? proposeRules(user.id, [correction]) : Promise.resolve([]),
-    alertsAfterExpense(user.id, result.data.id, toParisDateString(new Date())),
+    // An edit never "crosses" a threshold again: alerts are for new expenses only.
+    id === null
+      ? alertsAfterExpense(user.id, result.data.id, toParisDateString(new Date()))
+      : Promise.resolve([]),
   ]);
   return { ok: true, data: { id: result.data.id, proposals, alerts } };
 }

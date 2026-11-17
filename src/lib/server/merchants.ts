@@ -252,6 +252,20 @@ export async function mergeMerchants(
       .update(recurringRules)
       .set(set)
       .where(and(eq(recurringRules.userId, userId), eq(recurringRules.merchantId, sourceId)));
+    // One merchant rule per merchant (ADR-038): the target's own rule wins.
+    const targetRule = await tx
+      .select({ id: categorizationRules.id })
+      .from(categorizationRules)
+      .where(
+        and(eq(categorizationRules.userId, userId), eq(categorizationRules.merchantId, targetId)),
+      );
+    if (targetRule.length) {
+      await tx
+        .delete(categorizationRules)
+        .where(
+          and(eq(categorizationRules.userId, userId), eq(categorizationRules.merchantId, sourceId)),
+        );
+    }
     await tx
       .update(categorizationRules)
       .set(set)

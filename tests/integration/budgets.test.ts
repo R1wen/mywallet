@@ -22,6 +22,7 @@ import {
   updateBudget,
 } from "@/lib/server/budgets";
 import { listCategories } from "@/lib/server/categories";
+import { mergeMerchants } from "@/lib/server/merchants";
 import { getMonthDashboard } from "@/lib/server/dashboard";
 import { provisionUser } from "@/lib/server/provisioning";
 import { confirmReceipt, createReceipt } from "@/lib/server/receipts";
@@ -126,16 +127,45 @@ describe("envelopes", () => {
     if (!all.ok) throw new Error(all.error);
     const view = (await listBudgets(A, TODAY, TODAY)).find((b) => b.id === all.data.id);
     expect(view).toMatchObject({ name: "Toutes les dépenses", spentCents: 19100 });
-    expect(await updateBudget(A, all.data.id, budget({ amount: "150", alertPercent: 90 }))).toEqual(
-      {
-        ok: true,
-        data: undefined,
-      },
-    );
+    expect(
+      await updateBudget(A, all.data.id, budget({ amount: "150", alertPercent: 90 }), TODAY),
+    ).toEqual({
+      ok: true,
+      data: undefined,
+    });
     expect(
       (await listBudgets(A, TODAY, TODAY)).find((b) => b.id === all.data.id)?.status.level,
     ).toBe("over");
     expect(await deleteBudget(A, all.data.id)).toEqual({ ok: true, data: undefined });
+  });
+
+  it("keeps one open envelope per category and period, whatever the month it starts", async () => {
+    // Same category created again a month later: still refused.
+    expect(
+      await createBudget(
+        A,
+        budget({ categoryId: cat["Alimentation"], amount: "50" }),
+        "2026-12-03",
+      ),
+    ).toEqual({ ok: false, error: "Cette catégorie a déjà un budget sur cette période." });
+    const yearly = await createBudget(
+      A,
+      budget({ categoryId: cat["Shopping"], amount: "1000", period: "yearly" }),
+      TODAY,
+    );
+    if (!yearly.ok) throw new Error(yearly.error);
+    // Switched to monthly: it starts this month, not in January.
+    await updateBudget(
+      A,
+      yearly.data.id,
+      budget({ categoryId: cat["Shopping"], amount: "100" }),
+      TODAY,
+    );
+    expect((await listBudgets(A, "2026-02-10", TODAY)).some((b) => b.id === yearly.data.id)).toBe(
+      false,
+    );
+    expect((await listBudgets(A, TODAY, TODAY)).some((b) => b.id === yearly.data.id)).toBe(true);
+    await deleteBudget(A, yearly.data.id);
   });
 
   it("refuses an income category", async () => {
@@ -320,6 +350,28 @@ describe("learned rules", () => {
   });
 });
 
+describe("merging merchants with rules", () => {
+  it("keeps the target's merchant rule when both merchants have one", async () => {
+    const shops = await db
+      .select({ id: merchants.id, name: merchants.name })
+      .from(merchants)
+      .where(eq(merchants.userId, A));
+    const carrefour = shops.find((m) => m.name === "Carrefour")!;
+    const lidl = shops.find((m) => m.name === "Lidl")!;
+    for (const m of [carrefour, lidl]) {
+      await saveRule(A, {
+        matchType: "merchant",
+        pattern: null,
+        merchantId: m.id,
+        categoryId: cat["Courses"]!,
+      });
+    }
+    expect(await mergeMerchants(A, carrefour.id, lidl.id)).toEqual({ ok: true, data: undefined });
+    const left = (await listRules(A)).filter((r) => r.merchantId === carrefour.id);
+    expect(left).toHaveLength(1);
+  });
+});
+
 describe("goals", () => {
   it("tracks a goal by hand, never below zero, and archives it", async () => {
     const g = await createGoal(
@@ -371,7 +423,7 @@ describe("isolation A/B", () => {
     const [aRule] = await listRules(A);
     const notFound = { ok: false, error: "Élément introuvable." };
     expect(await deleteBudget(B, aBudget!.id)).toEqual(notFound);
-    expect(await updateBudget(B, aBudget!.id, budget({ amount: "1" }))).toEqual(notFound);
+    expect(await updateBudget(B, aBudget!.id, budget({ amount: "1" }), TODAY)).toEqual(notFound);
     expect(await archiveGoal(B, aGoal!.id)).toEqual(notFound);
     expect(await contributeToGoal(B, aGoal!.id, 100)).toEqual(notFound);
     expect(await deleteRule(B, aRule!.id)).toEqual(notFound);

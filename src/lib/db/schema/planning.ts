@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { cents, currency, id, inList, ownerId, timestamps } from "./columns";
@@ -41,6 +42,15 @@ export const budgets = pgTable(
     unique("budgets_user_category_period_key")
       .on(t.userId, t.categoryId, t.period, t.startsOn)
       .nullsNotDistinct(),
+    // One open envelope per category and period (ADR-036), whatever its start.
+    // (A global budget has no category: the null is folded so it counts once too.)
+    uniqueIndex("budgets_user_category_period_open_key")
+      .on(
+        t.userId,
+        sql`coalesce(${t.categoryId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+        t.period,
+      )
+      .where(sql`${t.endsOn} is null`),
     foreignKey({
       name: "budgets_category_fk",
       columns: [t.userId, t.categoryId],
