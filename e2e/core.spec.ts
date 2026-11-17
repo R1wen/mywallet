@@ -414,9 +414,13 @@ test.describe("finitions : confidentialité, exports, palette, accessibilité", 
     // Signing in again within the 7 days cancels the deletion.
     await page.getByLabel("E-mail").fill(accountEmail);
     await page.getByLabel("Mot de passe", { exact: true }).fill("mot-de-passe-e2e-2026");
-    await page.getByRole("button", { name: "Se connecter" }).click();
-    await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible({
-      timeout: 30_000,
-    });
+    // Both e2e projects sign in from the same IP: wait out the 5-per-minute limit if hit.
+    test.setTimeout(180_000);
+    await expect(async () => {
+      await page.getByRole("button", { name: "Se connecter" }).click();
+      await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible({
+        timeout: 10_000,
+      });
+    }).toPass({ timeout: 150_000, intervals: [20_000] });
   });
 });
