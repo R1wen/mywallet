@@ -25,7 +25,9 @@ import {
 } from "@/lib/db/schema";
 import { normalizeMerchantName } from "@/lib/domain/merchant";
 import { signedAmount, type TxKind } from "@/lib/domain/transactions";
+import { resolveCategory } from "@/lib/domain/categorize";
 import { logoInfo, type MerchantLogoInfo } from "./merchants";
+import { loadRules } from "./rules";
 import { othersShareSql, releasePayments } from "./sharing";
 import {
   PAGE_SIZE,
@@ -333,7 +335,7 @@ export async function writeTransaction(
   tx: Tx,
   existing?: { id: string; transferGroupId: string | null },
   recurringRuleId: string | null = null,
-): Promise<Result<{ id: string }>> {
+): Promise<Result<WriteResult>> {
   const refError = await checkReferences(userId, input, tx);
   if (refError) return fail(refError);
 
@@ -396,10 +398,26 @@ export async function writeTransaction(
   }
 
   const merchant = await resolveMerchant(userId, input.merchantName, tx);
-  let categoryId = input.categoryId;
-  if (!categoryId && merchant?.defaultCategoryId && input.kind !== "income") {
-    categoryId = merchant.defaultCategoryId;
-  }
+  // My rules, then the merchant's default (ADR-038).
+  // Rules hold expense categories: an income keeps what the user chose.
+  const automatic =
+    input.kind === "income"
+      ? null
+      : resolveCategory(
+          {
+            explicit: null,
+            label: input.label,
+            merchantId: merchant?.id ?? null,
+            merchantDefault: merchant?.defaultCategoryId ?? null,
+          },
+          await loadRules(userId, tx),
+        );
+  const categoryId = input.categoryId ?? automatic;
+  // A category chosen against the automatic one may become a rule (proposed, ADR-038).
+  const correction: Correction | null =
+    input.kind === "expense" && input.categoryId && input.categoryId !== automatic
+      ? { merchantId: merchant?.id ?? null, label: input.label, categoryId: input.categoryId }
+      : null;
   const values = {
     ...common,
     accountId: input.accountId,
@@ -414,14 +432,18 @@ export async function writeTransaction(
       .set(values)
       .where(and(eq(transactions.userId, userId), eq(transactions.id, existing.id)))
       .returning({ id: transactions.id });
-    return rows[0] ? ok(rows[0]) : fail(NOT_FOUND);
+    return rows[0] ? ok({ ...rows[0], correction }) : fail(NOT_FOUND);
   }
   const [row] = await tx
     .insert(transactions)
     .values({ ...values, recurringRuleId })
     .returning({ id: transactions.id });
-  return ok(row!);
+  return ok({ ...row!, correction });
 }
+
+/** A category chosen by hand against the automatic one (merchant or label). */
+export type Correction = { merchantId: string | null; label: string; categoryId: string };
+export type WriteResult = { id: string; correction?: Correction | null };
 
 function mapWriteError(e: unknown): Result<never> {
   if (isForeignKeyViolation(e)) return fail("Compte, catégorie ou magasin introuvable.");
@@ -433,7 +455,7 @@ export async function createTransaction(
   userId: string,
   input: TransactionInput,
   db: Db = defaultDb,
-): Promise<Result<{ id: string }>> {
+): Promise<Result<WriteResult>> {
   try {
     return await db.transaction((tx) => writeTransaction(userId, input, tx));
   } catch (e) {
@@ -446,11 +468,15 @@ export async function updateTransaction(
   id: string,
   input: TransactionInput,
   db: Db = defaultDb,
-): Promise<Result<{ id: string }>> {
+): Promise<Result<WriteResult>> {
   try {
     return await db.transaction(async (tx) => {
       const [current] = await tx
-        .select({ kind: transactions.kind, transferGroupId: transactions.transferGroupId })
+        .select({
+          kind: transactions.kind,
+          transferGroupId: transactions.transferGroupId,
+          categoryId: transactions.categoryId,
+        })
         .from(transactions)
         .where(and(eq(transactions.userId, userId), eq(transactions.id, id)))
         .for("update");
@@ -486,7 +512,13 @@ export async function updateTransaction(
       if ((current.kind === "transfer") !== (input.kind === "transfer")) {
         return fail("Un virement ne peut pas changer de type : supprimez-le puis recréez-le.");
       }
-      return writeTransaction(userId, input, tx, { id, transferGroupId: current.transferGroupId });
+      const written = await writeTransaction(userId, input, tx, {
+        id,
+        transferGroupId: current.transferGroupId,
+      });
+      // Only a category that changed now is a correction worth learning.
+      if (written.ok && current.categoryId === input.categoryId) written.data.correction = null;
+      return written;
     });
   } catch (e) {
     return mapWriteError(e);

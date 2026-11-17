@@ -11,12 +11,23 @@ import { isActive, isAvailable, NAV_ITEMS } from "./nav";
 const STORAGE_KEY = "mw.sidebar.collapsed";
 
 /** Lit le chemin courant : à placer sous <Suspense> (routes à paramètre dynamique). */
-export function Sidebar({ footer }: { footer?: ReactNode }) {
-  return <SidebarView pathname={usePathname()} footer={footer} />;
+/** Server-rendered counters next to an entry (e.g. budget alerts), keyed by href. */
+export type NavBadges = Partial<Record<string, ReactNode>>;
+
+export function Sidebar({ footer, badges }: { footer?: ReactNode; badges?: NavBadges }) {
+  return <SidebarView pathname={usePathname()} footer={footer} badges={badges} />;
 }
 
 /** Barre latérale ; `pathname` null = repli sans élément actif (fallback de Suspense). */
-export function SidebarView({ pathname, footer }: { pathname: string | null; footer?: ReactNode }) {
+export function SidebarView({
+  pathname,
+  footer,
+  badges,
+}: {
+  pathname: string | null;
+  footer?: ReactNode;
+  badges?: NavBadges;
+}) {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -81,6 +92,7 @@ export function SidebarView({ pathname, footer }: { pathname: string | null; foo
                 {!available && !collapsed && (
                   <span className="ml-auto text-xs text-subtle">S{item.sprint}</span>
                 )}
+                {available && !collapsed && badges?.[item.href]}
               </>
             );
             const base = cn(

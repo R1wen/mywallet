@@ -188,3 +188,19 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 ## ADR-035 — Virement reçu dans un relevé CSV
 
 - Décision (validée) : à l'aperçu, une ligne entrante nouvelle dont le montant est exactement le reste dû d'une créance (la plus ancienne) ou le total dû d'une seule personne, pour des dépenses antérieures au virement, est proposée en « remboursement » de cette personne. L'utilisateur peut choisir une autre personne ou « Créer » (revenu). Rien n'est lié sans validation de l'import ; une ligne refusée (montant supérieur au dû) annule tout l'import.
+
+## ADR-036 — Enveloppes budgétaires
+
+- Décision (validée au Sprint 5) : un budget plafonne « ma dépense réelle » (ADR-032) d'une catégorie, sous-catégories comprises, ou de toutes les dépenses, par mois ou par an. **Pas de report** : chaque période repart du montant fixé. Un budget compte à partir du début de la période où il est créé ; sa modification s'applique à toutes les périodes affichées.
+- Une ligne de ticket peut avoir sa propre catégorie : la dépense réelle par catégorie répartit le ticket par ligne (remises au prorata, parts des autres déduites ligne par ligne, parts globales au prorata). Les avoirs diminuent la dépense de leur catégorie.
+- Le rythme attendu (droite du début à la fin de la période) est affiché à titre indicatif.
+
+## ADR-037 — Alertes de budget et objectifs d'épargne
+
+- Décision (validée) : alertes dans l'application seulement (aucun service payant) : seuil réglable par budget (80 % par défaut, migration 0004), bandeau du tableau de bord, badge sur « Budgets », message juste après la saisie qui fait franchir un seuil (la dépense seule suffit à changer de niveau). Rouge seulement au-delà de 100 %.
+- Un objectif suit soit le solde d'un compte lié (épargne réelle), soit des montants saisis à la main (simple suivi, aucun mouvement créé, jamais négatif). L'effort mensuel = reste ÷ mois restants (arrondi au centime supérieur).
+
+## ADR-038 — Règles de classement apprises
+
+- Décision (validée) : corriger la catégorie d'une dépense (saisie, modification, ticket) **propose** une règle (« Toujours classer Amazon dans Maison ? ») ; rien n'est appris sans confirmation. Règle par magasin quand il y en a un, sinon par mot-clé (jusqu'à trois mots du libellé, sans tailles ni quantités). Une seule règle par magasin ou mot-clé (la confirmer à nouveau la met à jour).
+- Ordre de résolution : catégorie choisie, puis mes règles (priorité, puis motif le plus long, mots entiers), puis la catégorie par défaut du magasin. Appliqué à la saisie, à l'import CSV (libellé bancaire) et aux lignes de ticket (mots-clés). Les revenus ne reçoivent pas de catégorie automatique. Règles visibles, désactivables et supprimables dans Réglages.

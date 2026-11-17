@@ -20,7 +20,9 @@ import {
   saveExtraction,
   type UploadedReceipt,
 } from "@/lib/server/receipts";
+import { alertsAfterExpense, type BudgetAlert } from "@/lib/server/budgets";
 import { fail, ok, type Result } from "@/lib/server/result";
+import { proposeRules, type ProposedRule } from "@/lib/server/rules";
 import {
   bankCommitSchema,
   bankPreviewSchema,
@@ -70,15 +72,23 @@ export async function submitOcr(input: unknown): Promise<Result<{ status: string
 export async function validateReceipt(
   id: unknown,
   values: unknown,
-): Promise<Result<{ transactionId: string }>> {
+): Promise<Result<{ transactionId: string; proposals: ProposedRule[]; alerts: BudgetAlert[] }>> {
   const user = await requireUser();
   const receiptId = idSchema.safeParse(id);
   if (!receiptId.success) return fail("Ticket introuvable.");
   const parsed = receiptReviewSchema.safeParse(values);
   if (!parsed.success) return fail(firstIssue(parsed.error));
   const r = await confirmReceipt(user.id, receiptId.data, parsed.data);
-  if (r.ok) refresh();
-  return r;
+  if (!r.ok) return r;
+  refresh();
+  const [proposals, alerts] = await Promise.all([
+    proposeRules(user.id, r.data.corrections),
+    // Attached to an imported bank line: the expense was already counted.
+    parsed.data.attachToTransactionId
+      ? Promise.resolve([])
+      : alertsAfterExpense(user.id, r.data.transactionId, toParisDateString(new Date())),
+  ]);
+  return { ok: true, data: { transactionId: r.data.transactionId, proposals, alerts } };
 }
 
 async function simple(id: unknown, run: (userId: string, id: string) => Promise<Result>) {

@@ -14,6 +14,7 @@ import { formatDateFr, toParisDateString } from "@/lib/domain/dates";
 import { listAccounts } from "@/lib/server/accounts";
 import { listCategories } from "@/lib/server/categories";
 import { listMerchantNames } from "@/lib/server/merchants";
+import { loadRules } from "@/lib/server/rules";
 import { listPersonOptions } from "@/lib/server/sharing";
 import { getReceipt } from "@/lib/server/receipts";
 import { idSchema } from "@/lib/validation/settings";
@@ -48,11 +49,12 @@ async function Ticket({ params }: Pick<PageProps<"/tickets/[id]">, "params">) {
 
   let body: React.ReactNode;
   if (reviewable) {
-    const [accounts, categories, merchants, people] = await Promise.all([
+    const [accounts, categories, merchants, people, rules] = await Promise.all([
       listAccounts(user.id),
       listCategories(user.id),
       listMerchantNames(user.id),
       listPersonOptions(user.id),
+      loadRules(user.id),
     ]);
     body = (
       <ReviewForm
@@ -70,6 +72,7 @@ async function Ticket({ params }: Pick<PageProps<"/tickets/[id]">, "params">) {
             })),
           merchants: merchants.map((m) => m.name),
           people,
+          rules: rules.filter((r) => r.active && r.matchType !== "merchant"),
         }}
       />
     );

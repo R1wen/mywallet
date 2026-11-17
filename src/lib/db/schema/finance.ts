@@ -13,6 +13,7 @@
  * Enumerations are `text` + CHECK (cheap to evolve, no `ALTER TYPE` migrations).
  */
 import { sql } from "drizzle-orm";
+import { RULE_MATCH_TYPES, type RuleMatchType } from "../../domain/categorize";
 import {
   boolean,
   check,
@@ -47,7 +48,7 @@ export const RECURRING_KINDS = ["expense", "income", "transfer"] as const;
 export const RECURRING_FREQUENCIES = ["weekly", "monthly", "yearly"] as const;
 /** planned = generated, not in the balance; confirmed = linked transaction; skipped = ignored. */
 export const OCCURRENCE_STATUSES = ["planned", "confirmed", "skipped"] as const;
-export const RULE_MATCH_TYPES = ["contains", "equals", "starts_with", "merchant"] as const;
+export { RULE_MATCH_TYPES } from "../../domain/categorize";
 
 /** Uploaded merchant logo size limit (256 KiB). */
 export const MERCHANT_LOGO_MAX_BYTES = 262_144;
@@ -59,7 +60,7 @@ export type LogoSource = (typeof LOGO_SOURCES)[number];
 export type RecurringKind = (typeof RECURRING_KINDS)[number];
 export type RecurringFrequency = (typeof RECURRING_FREQUENCIES)[number];
 export type OccurrenceStatus = (typeof OCCURRENCE_STATUSES)[number];
-export type RuleMatchType = (typeof RULE_MATCH_TYPES)[number];
+export type { RuleMatchType } from "../../domain/categorize";
 
 /* -------------------------------------------------------------------------- */
 /* Accounts                                                                   */
@@ -462,6 +463,10 @@ export const categorizationRules = pgTable(
   },
   (t) => [
     unique("categorization_rules_user_id_id_key").on(t.userId, t.id),
+    // One rule per pattern or merchant: learning the same correction twice updates it.
+    unique("categorization_rules_target_key")
+      .on(t.userId, t.matchType, t.pattern, t.merchantId)
+      .nullsNotDistinct(),
     index("categorization_rules_user_priority_idx")
       .on(t.userId, t.priority)
       .where(sql`${t.active}`),

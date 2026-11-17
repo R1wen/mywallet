@@ -450,7 +450,7 @@ describe("regressions (code review)", () => {
       categoryId: null,
       notes: null,
     });
-    expect(edited).toEqual({ ok: true, data: { id: r.data.transactionId } });
+    expect(edited).toMatchObject({ ok: true, data: { id: r.data.transactionId } });
     const [after] = await ofRule(id, "2026-11-25", "2026-11-25");
     expect(after).toMatchObject({ transactionId: r.data.transactionId, actualCents: -6_000 });
   });

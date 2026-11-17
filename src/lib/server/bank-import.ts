@@ -15,10 +15,12 @@ import {
   type ColumnMapping,
 } from "@/lib/domain/bank-csv";
 import { allocatePayment, suggestReimbursements, type OpenClaim } from "@/lib/domain/claims";
+import { resolveCategory } from "@/lib/domain/categorize";
 import { findMerchantByLabel } from "@/lib/domain/merchant";
 import { matchByAmountAndDate, reconcileWindow } from "@/lib/domain/reconcile";
 import { MAX_CSV_LINES, type ImportAction } from "@/lib/validation/imports";
 import { Abort, abortedResult, fail, isUniqueViolation, ok, type Result } from "./result";
+import { loadRules } from "./rules";
 import { listOpenClaims, writePayment } from "./sharing";
 
 export type PreviewLine = BankLine & {
@@ -277,6 +279,7 @@ async function writeBankImport(
     const open = preview.data.openClaims;
     const left = new Map(open.map((c) => [c.id, c.remainingCents]));
 
+    const rules = await loadRules(userId, tx);
     const known = await tx
       .select({
         id: merchants.id,
@@ -365,7 +368,18 @@ async function writeBankImport(
         occurredOn: line.date,
         label,
         merchantId: merchant?.id ?? null,
-        categoryId: isExpense ? (merchant?.defaultCategoryId ?? null) : null,
+        // My rules on the bank label, then the merchant's default (ADR-038).
+        categoryId: isExpense
+          ? resolveCategory(
+              {
+                explicit: null,
+                label: line.label,
+                merchantId: merchant?.id ?? null,
+                merchantDefault: merchant?.defaultCategoryId ?? null,
+              },
+              rules,
+            )
+          : null,
         bankLineKey: key,
         bankLabel: line.label,
       });

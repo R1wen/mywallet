@@ -3,11 +3,13 @@ import { PageHeader } from "@/components/shell/app-shell";
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { CategoriesManager } from "@/components/settings/categories-manager";
 import { ImportSettings } from "@/components/settings/import-settings";
+import { RulesManager } from "@/components/settings/rules-manager";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { listAccountsWithBalance } from "@/lib/server/accounts";
 import { listCategories } from "@/lib/server/categories";
 import { getImportSettings } from "@/lib/server/import-settings";
+import { listRules } from "@/lib/server/rules";
 
 export default function SettingsPage() {
   return (
@@ -25,10 +27,11 @@ export default function SettingsPage() {
 
 async function Settings() {
   const user = await requireUser();
-  const [accounts, categories, importSettings] = await Promise.all([
+  const [accounts, categories, importSettings, rules] = await Promise.all([
     listAccountsWithBalance(user.id),
     listCategories(user.id),
     getImportSettings(user.id),
+    listRules(user.id),
   ]);
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
@@ -47,6 +50,16 @@ async function Settings() {
         <ImportSettings
           structurer={importSettings.structurer}
           available={importSettings.available}
+        />
+        <RulesManager
+          rules={rules.map((r) => ({
+            id: r.id,
+            matchType: r.matchType,
+            pattern: r.pattern,
+            merchantName: r.merchantName,
+            categoryName: r.categoryName,
+            active: r.active,
+          }))}
         />
       </div>
       <CategoriesManager

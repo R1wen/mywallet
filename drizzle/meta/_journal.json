@@ -29,6 +29,20 @@
       "when": 1794853194071,
       "tag": "0003_awesome_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794911767914,
+      "tag": "0004_flaky_shriek",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794913664864,
+      "tag": "0005_perfect_swordsman",
+      "breakpoints": true
     }
   ]
 }

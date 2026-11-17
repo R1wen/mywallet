@@ -3,7 +3,7 @@ import { ShareDialogProvider } from "@/components/sharing/share-dialog";
 import { TransactionDialogProvider } from "@/components/transactions/transaction-dialog";
 import { CommandPaletteProvider } from "./command-palette";
 import { MobileTabbar, MobileTabbarView } from "./mobile-tabbar";
-import { Sidebar, SidebarView } from "./sidebar";
+import { Sidebar, SidebarView, type NavBadges } from "./sidebar";
 import { Topbar } from "./topbar";
 
 /**
@@ -14,10 +14,12 @@ export function AppShell({
   children,
   userMenu,
   topbarActions,
+  navBadges,
 }: {
   children: ReactNode;
   userMenu?: ReactNode;
   topbarActions?: ReactNode;
+  navBadges?: NavBadges;
 }) {
   return (
     <ShareDialogProvider>
@@ -31,8 +33,10 @@ export function AppShell({
           </a>
           <div className="flex min-h-dvh">
             {/* usePathname() exige un <Suspense> sur les routes dynamiques (/magasins/[id]). */}
-            <Suspense fallback={<SidebarView pathname={null} footer={userMenu} />}>
-              <Sidebar footer={userMenu} />
+            <Suspense
+              fallback={<SidebarView pathname={null} footer={userMenu} badges={navBadges} />}
+            >
+              <Sidebar footer={userMenu} badges={navBadges} />
             </Suspense>
             <div className="flex min-w-0 flex-1 flex-col">
               <Topbar actions={topbarActions} />

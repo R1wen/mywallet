@@ -2,19 +2,21 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  integer,
   date,
   foreignKey,
   pgTable,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { cents, currency, id, inList, ownerId, timestamps } from "./columns";
 import { accounts, categories } from "./finance";
 
-export const BUDGET_PERIODS = ["monthly", "yearly"] as const;
-export type BudgetPeriod = (typeof BUDGET_PERIODS)[number];
+import { BUDGET_PERIODS, type BudgetPeriod } from "../../domain/budgets";
+export { BUDGET_PERIODS, type BudgetPeriod } from "../../domain/budgets";
 
 /**
  * Cap on "ma dépense réelle" for a category (children included) per period.
@@ -29,6 +31,8 @@ export const budgets = pgTable(
     period: text().$type<BudgetPeriod>().notNull().default("monthly"),
     amountCents: cents("amount_cents").notNull(),
     currency: currency(),
+    /** Alert from this share of the amount, in percent (ADR-037). */
+    alertPercent: integer().notNull().default(80),
     startsOn: date({ mode: "string" }).notNull(),
     endsOn: date({ mode: "string" }),
     ...timestamps,
@@ -38,6 +42,15 @@ export const budgets = pgTable(
     unique("budgets_user_category_period_key")
       .on(t.userId, t.categoryId, t.period, t.startsOn)
       .nullsNotDistinct(),
+    // One open envelope per category and period (ADR-036), whatever its start.
+    // (A global budget has no category: the null is folded so it counts once too.)
+    uniqueIndex("budgets_user_category_period_open_key")
+      .on(
+        t.userId,
+        sql`coalesce(${t.categoryId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+        t.period,
+      )
+      .where(sql`${t.endsOn} is null`),
     foreignKey({
       name: "budgets_category_fk",
       columns: [t.userId, t.categoryId],
@@ -45,6 +58,7 @@ export const budgets = pgTable(
     }).onDelete("cascade"),
     check("budgets_period_check", sql`${t.period} in (${inList(BUDGET_PERIODS)})`),
     check("budgets_amount_check", sql`${t.amountCents} > 0`),
+    check("budgets_alert_check", sql`${t.alertPercent} between 1 and 100`),
     check("budgets_dates_check", sql`${t.endsOn} is null or ${t.endsOn} >= ${t.startsOn}`),
   ],
 );

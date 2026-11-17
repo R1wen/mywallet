@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Users } from "lucide-react";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { showSaveFeedback } from "@/components/budgets/save-feedback";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Field, Input, NativeSelect } from "@/components/ui/input";
@@ -128,6 +129,7 @@ export function TransactionForm({
     }
     rememberAccount(values.accountId);
     toast(isEdit ? "Transaction modifiée." : "Transaction ajoutée.");
+    showSaveFeedback(result.data);
     onDone();
   }
 

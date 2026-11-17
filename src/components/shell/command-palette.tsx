@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { CornerDownLeft, HandCoins, LogOut, Plus, Search } from "lucide-react";
+import { CornerDownLeft, HandCoins, LogOut, PiggyBank, Plus, Search } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useRouter } from "next/navigation";
 import {
@@ -119,6 +119,14 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                   >
                     <HandCoins className="size-4" aria-hidden />
                     Voir ce que l&apos;on me doit
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="budgets enveloppes objectifs épargne alerte"
+                    onSelect={() => run(() => router.push("/budgets"))}
+                  >
+                    <PiggyBank className="size-4" aria-hidden />
+                    Budgets et objectifs
                   </Command.Item>
                   <Command.Item
                     className={itemClass}
