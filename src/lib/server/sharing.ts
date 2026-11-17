@@ -215,6 +215,7 @@ export type PersonExpense = {
   occurredOn: string;
   label: string;
   totalCents: number;
+  merchantId: string | null;
   merchantLogo: MerchantLogoInfo | null;
   merchantName: string | null;
   claims: PersonClaim[];
@@ -337,6 +338,7 @@ export async function getPersonDetail(
         occurredOn: r.occurredOn,
         label: r.label,
         totalCents: -r.totalCents,
+        merchantId: r.merchantId,
         merchantName: r.merchantName,
         merchantLogo:
           r.merchantId && r.merchantNormalizedName && r.merchantUpdatedAt

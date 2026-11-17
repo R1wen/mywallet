@@ -289,9 +289,9 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                       </span>
                     )}
                     {l.reimbursement && (
-                      <span className="truncate text-xs text-muted">
-                        Montant dû par {debtorName.get(l.reimbursement.personId) ?? "une personne"}{" "}
-                        : remboursement proposé
+                      <span className="text-xs text-muted">
+                        Remboursement proposé :{" "}
+                        {debtorName.get(l.reimbursement.personId) ?? "une personne"}
                       </span>
                     )}
                   </span>
@@ -308,7 +308,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                     value={actions[l.row] ?? defaultChoice(l)}
                     disabled={l.status === "duplicate"}
                     onChange={(e) => setActions((a) => ({ ...a, [l.row]: e.target.value }))}
-                    className="w-36 justify-self-end sm:w-full"
+                    className="w-40 justify-self-end sm:w-full"
                   >
                     {(l.match
                       ? (["link", "create", "skip"] as const)
@@ -322,7 +322,7 @@ export function BankImport({ accounts }: { accounts: { id: string; name: string 
                       l.amountCents > 0 &&
                       preview.debtors.map((d) => (
                         <option key={d.id} value={REIMBURSE + d.id}>
-                          Remboursé par {d.name}
+                          {d.name} rembourse
                         </option>
                       ))}
                   </NativeSelect>

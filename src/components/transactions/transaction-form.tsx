@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Users } from "lucide-react";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -87,10 +88,13 @@ export function TransactionForm({
   data,
   transaction,
   onDone,
+  onShare,
 }: {
   data: TransactionFormData;
   transaction: TransactionDetail | null;
   onDone: () => void;
+  /** Opens the share dialog of the edited expense. */
+  onShare?: (transactionId: string) => void;
 }) {
   const isEdit = transaction !== null;
   const [formError, setFormError] = useState<string | null>(null);
@@ -363,6 +367,16 @@ export function TransactionForm({
           </span>
         )}
         <div className="flex gap-2">
+          {isEdit && transaction?.kind === "expense" && kind === "expense" && onShare && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onShare(transaction.id)}
+            >
+              <Users aria-hidden /> Partager
+            </Button>
+          )}
           <Button type="button" variant="ghost" size="sm" onClick={onDone}>
             Annuler
           </Button>

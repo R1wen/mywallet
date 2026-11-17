@@ -1,4 +1,5 @@
 import { Suspense, type ReactNode } from "react";
+import { ShareDialogProvider } from "@/components/sharing/share-dialog";
 import { TransactionDialogProvider } from "@/components/transactions/transaction-dialog";
 import { CommandPaletteProvider } from "./command-palette";
 import { MobileTabbar, MobileTabbarView } from "./mobile-tabbar";
@@ -19,34 +20,36 @@ export function AppShell({
   topbarActions?: ReactNode;
 }) {
   return (
-    <TransactionDialogProvider>
-      <CommandPaletteProvider>
-        <a
-          href="#contenu"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-sm focus:bg-surface-2 focus:px-3 focus:py-2"
-        >
-          Aller au contenu
-        </a>
-        <div className="flex min-h-dvh">
-          {/* usePathname() exige un <Suspense> sur les routes dynamiques (/magasins/[id]). */}
-          <Suspense fallback={<SidebarView pathname={null} footer={userMenu} />}>
-            <Sidebar footer={userMenu} />
-          </Suspense>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar actions={topbarActions} />
-            <main
-              id="contenu"
-              className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-24 md:px-6 md:pb-10"
-            >
-              {children}
-            </main>
+    <ShareDialogProvider>
+      <TransactionDialogProvider>
+        <CommandPaletteProvider>
+          <a
+            href="#contenu"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-sm focus:bg-surface-2 focus:px-3 focus:py-2"
+          >
+            Aller au contenu
+          </a>
+          <div className="flex min-h-dvh">
+            {/* usePathname() exige un <Suspense> sur les routes dynamiques (/magasins/[id]). */}
+            <Suspense fallback={<SidebarView pathname={null} footer={userMenu} />}>
+              <Sidebar footer={userMenu} />
+            </Suspense>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Topbar actions={topbarActions} />
+              <main
+                id="contenu"
+                className="mx-auto w-full max-w-[1280px] flex-1 px-4 pt-6 pb-24 md:px-6 md:pb-10"
+              >
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <Suspense fallback={<MobileTabbarView pathname={null} />}>
-          <MobileTabbar />
-        </Suspense>
-      </CommandPaletteProvider>
-    </TransactionDialogProvider>
+          <Suspense fallback={<MobileTabbarView pathname={null} />}>
+            <MobileTabbar />
+          </Suspense>
+        </CommandPaletteProvider>
+      </TransactionDialogProvider>
+    </ShareDialogProvider>
   );
 }
 

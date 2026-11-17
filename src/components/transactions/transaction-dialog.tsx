@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { loadTransactionDialog, type TransactionFormData } from "@/lib/actions/transactions";
 import type { TransactionDetail } from "@/lib/server/transactions";
+import { useShareDialog } from "@/components/sharing/share-dialog";
 import { TransactionForm } from "./transaction-form";
 
 type Ctx = { openNew: () => void; openEdit: (id: string) => void };
@@ -43,6 +44,7 @@ const isTyping = (el: EventTarget | null) =>
  */
 export function TransactionDialogProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>({ status: "closed" });
+  const { openShare } = useShareDialog();
   // Numéro de la dernière ouverture : une réponse tardive (fenêtre fermée entre-temps,
   // ou autre transaction ouverte depuis) est ignorée.
   const request = useRef(0);
@@ -118,6 +120,10 @@ export function TransactionDialogProvider({ children }: { children: ReactNode })
               data={state.data}
               transaction={state.transaction}
               onDone={close}
+              onShare={(id) => {
+                close();
+                openShare(id);
+              }}
             />
           )}
         </DialogContent>

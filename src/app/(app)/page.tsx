@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/shell/app-shell";
 import { NewTransactionButton } from "@/components/transactions/transaction-dialog";
 import { TransactionRows } from "@/components/transactions/transaction-rows";
 import { Amount } from "@/components/ui/amount";
+import { ClaimBadge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +21,7 @@ import {
   toParisDateString,
   type MonthKey,
 } from "@/lib/domain/dates";
+import { formatCents } from "@/lib/domain/money";
 import { getMonthDashboard } from "@/lib/server/dashboard";
 import { generateOccurrences, getResteAVivre } from "@/lib/server/recurring";
 import { cn } from "@/lib/utils";
@@ -95,7 +97,14 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
         <Stat label="Entrées" hint="Revenus du mois">
           <Amount cents={d.flows.incomeCents} variant={d.flows.incomeCents ? "flow" : "plain"} />
         </Stat>
-        <Stat label="Dépenses" hint="Achats moins avoirs">
+        <Stat
+          label="Dépenses"
+          hint={
+            d.flows.sharedCents
+              ? `Ma part : hors ${formatCents(d.flows.sharedCents)} dus par d'autres`
+              : "Achats moins avoirs"
+          }
+        >
           <Amount cents={-d.flows.spentCents} variant={d.flows.spentCents ? "flow" : "plain"} />
         </Stat>
         <Stat label="Solde du mois" hint="Hors virements internes">
@@ -106,6 +115,36 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/">, "searchParams">)
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
           {rav && <UpcomingCard rav={rav} today={today} />}
+          {d.receivables.pendingCents > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>À récupérer</CardTitle>
+                <Link href="/personnes" className="text-sm text-muted hover:text-text">
+                  Personnes
+                </Link>
+              </CardHeader>
+              <div className="flex items-baseline justify-between gap-3 px-4 pt-1">
+                <ClaimBadge status="pending" />
+                <Amount cents={d.receivables.pendingCents} className="text-lg font-medium" />
+              </div>
+              <ul className="px-4 pt-1 pb-2">
+                {d.receivables.people.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex h-11 items-center justify-between gap-3 border-b border-border last:border-0"
+                  >
+                    <Link
+                      href={`/personnes/${p.id}`}
+                      className="truncate text-base underline-offset-4 hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                    <Amount cents={p.pendingCents} />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Dépenses par catégorie</CardTitle>

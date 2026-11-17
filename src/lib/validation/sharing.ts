@@ -37,6 +37,7 @@ export const personInputSchema = z.object({
     .transform((v) => v || null),
 });
 export type PersonInputValues = z.input<typeof personInputSchema>;
+export type PersonInput = z.output<typeof personInputSchema>;
 
 /**
  * Money received from a person, split over some of their claims (the form proposes the
