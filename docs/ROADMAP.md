@@ -106,8 +106,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Serveur : séries, comparaison, abonnements, prévision, rappels, rapport, questions ; isolation A/B testée
 - [x] UI : écran Analyses (graphique 12 mois, prévision, catégories, abonnements, inhabituel, rappels, simulateur, questions), rapport imprimable, rappels et rapport sur le tableau de bord
 - [x] Tests : 689 unitaires, 148 intégration, 26 e2e ; captures (`docs/screens/sprint-6/`), `ui-reviewer`, `/code-review` (10 corrections : forte hausse de prix, échéances générées avant la prévision, prévision sur montants payés, avoirs et lignes dans les questions par magasin, jour de prélèvement, moyenne sur l'historique réel, appel de modèle partagé, `centsToInput`, test A/B des abonnements ignorés)
-- [ ] PR, CI verte
-- [ ] Vérifier : récapitulatif, STOP
+- [x] PR #8, CI verte
+- [x] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
