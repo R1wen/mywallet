@@ -1,6 +1,7 @@
 "use client";
 
 import { Send } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
@@ -160,7 +161,7 @@ export function Simulator({ baseline }: { baseline: Baseline }) {
         <span className="text-sm text-muted">
           aujourd&apos;hui <Amount cents={result.baselineNetCents} className="text-muted" />
         </span>
-        <span className="mt-2 text-sm text-muted">Sur un an</span>
+        <span className="mt-2 text-sm text-muted">Différence sur un an</span>
         <span className="text-md">
           <Amount cents={result.yearlyDeltaCents} variant="flow" />
         </span>
@@ -209,10 +210,18 @@ export function AskBox({ enabled, modelName }: { enabled: boolean; modelName: st
 
   if (!enabled) {
     return (
-      <p className="text-sm text-muted">
-        Choisissez Ollama ou Gemini dans Réglages, rubrique « Lecture des tickets », pour poser des
-        questions sur vos dépenses.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          Choisissez Ollama ou Gemini dans Réglages, rubrique « Lecture des tickets », pour poser
+          des questions sur vos dépenses.
+        </p>
+        <Link
+          href="/reglages"
+          className="inline-flex h-8 items-center rounded-sm border border-border px-3 text-sm hover:bg-surface-2 pointer-coarse:h-11"
+        >
+          Ouvrir les réglages
+        </Link>
+      </div>
     );
   }
   const value = (v: number) =>

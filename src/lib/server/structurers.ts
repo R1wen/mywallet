@@ -22,6 +22,72 @@ export type ReceiptStructurer = {
 };
 
 const TIMEOUT_MS = 45_000;
+
+/**
+ * One call to a configured model with a JSON schema (ADR-029, 040): a text prompt and,
+ * for receipts, an optional file. Returns the raw JSON text, or null if not configured.
+ */
+export async function callModel(
+  name: "ollama" | "gemini",
+  input: { prompt: string; file?: StoredFile | null; schema: object; timeoutMs?: number },
+): Promise<string | null> {
+  const env = serverEnv();
+  const signal = AbortSignal.timeout(input.timeoutMs ?? TIMEOUT_MS);
+  const file = input.file ?? null;
+  if (name === "ollama") {
+    if (!env.OLLAMA_URL) return null;
+    const res = await fetch(new URL("/api/chat", env.OLLAMA_URL), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        model: env.OLLAMA_MODEL,
+        stream: false,
+        format: input.schema,
+        options: { temperature: 0 },
+        messages: [
+          {
+            role: "user",
+            content: input.prompt,
+            ...(file && isImage(file) ? { images: [file.data.toString("base64")] } : {}),
+          },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`ollama status ${res.status}`);
+    const body = (await res.json()) as { message?: { content?: string } };
+    return body.message?.content ?? null;
+  }
+  if (!env.GEMINI_API_KEY) return null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+    signal,
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            ...(file && file.mimeType !== "image/heic"
+              ? [{ inline_data: { mime_type: file.mimeType, data: file.data.toString("base64") } }]
+              : []),
+            { text: input.prompt },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseSchema: input.schema,
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`gemini status ${res.status}`);
+  const body = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  return body.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+}
 const isImage = (f: StoredFile) => f.mimeType !== "application/pdf" && f.mimeType !== "image/heic";
 
 function userPrompt(ocrText: string): string {
@@ -35,29 +101,12 @@ export const ollamaStructurer: ReceiptStructurer = {
   name: "ollama",
   available: () => Boolean(serverEnv().OLLAMA_URL),
   async structure(file, ocrText) {
-    const env = serverEnv();
-    if (!env.OLLAMA_URL) return null;
-    const res = await fetch(new URL("/api/chat", env.OLLAMA_URL), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      body: JSON.stringify({
-        model: env.OLLAMA_MODEL,
-        stream: false,
-        format: MODEL_RECEIPT_JSON_SCHEMA,
-        options: { temperature: 0 },
-        messages: [
-          {
-            role: "user",
-            content: userPrompt(ocrText),
-            ...(isImage(file) ? { images: [file.data.toString("base64")] } : {}),
-          },
-        ],
-      }),
+    const raw = await callModel("ollama", {
+      prompt: userPrompt(ocrText),
+      file,
+      schema: MODEL_RECEIPT_JSON_SCHEMA,
     });
-    if (!res.ok) throw new Error(`ollama status ${res.status}`);
-    const body = (await res.json()) as { message?: { content?: string } };
-    return parseModelReceipt(body.message?.content ?? "");
+    return raw === null ? null : parseModelReceipt(raw);
   },
 };
 
@@ -65,40 +114,12 @@ export const geminiStructurer: ReceiptStructurer = {
   name: "gemini",
   available: () => Boolean(serverEnv().GEMINI_API_KEY),
   async structure(file, ocrText) {
-    const env = serverEnv();
-    if (!env.GEMINI_API_KEY) return null;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              ...(file.mimeType !== "image/heic"
-                ? [
-                    {
-                      inline_data: { mime_type: file.mimeType, data: file.data.toString("base64") },
-                    },
-                  ]
-                : []),
-              { text: userPrompt(ocrText) },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0,
-          responseMimeType: "application/json",
-          responseSchema: MODEL_RECEIPT_JSON_SCHEMA,
-        },
-      }),
+    const raw = await callModel("gemini", {
+      prompt: userPrompt(ocrText),
+      file,
+      schema: MODEL_RECEIPT_JSON_SCHEMA,
     });
-    if (!res.ok) throw new Error(`gemini status ${res.status}`);
-    const body = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    return parseModelReceipt(body.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
+    return raw === null ? null : parseModelReceipt(raw);
   },
 };
 

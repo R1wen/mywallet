@@ -30,11 +30,11 @@ import {
   shiftMonth,
   type MonthKey,
 } from "@/lib/domain/dates";
-import type { Cents } from "@/lib/domain/money";
+import { centsToInput, type Cents } from "@/lib/domain/money";
 import { buildMonthlyReport, type ReportSection } from "@/lib/domain/report";
 import { recurringRuleInputSchema } from "@/lib/validation/recurring";
 import { listBudgets, listGoals } from "./budgets";
-import { createRule, getResteAVivre } from "./recurring";
+import { createRule, generateOccurrences, getResteAVivre } from "./recurring";
 import { fail, NOT_FOUND, ok, type Result } from "./result";
 import { getReceivables } from "./sharing";
 import { othersShareSql } from "./shares-sql";
@@ -136,16 +136,24 @@ export async function categoryComparison(
   db: Db = defaultDb,
 ): Promise<NamedComparison[]> {
   const { rootOf, nameOf } = await categoryInfo(userId, db);
-  const months = [0, -1, -2, -3, -4].map((d) => shiftMonth(month.year, month.month, d));
-  const [current, previous, ...older] = await Promise.all(
-    months.map((m) => rootSpending(userId, m, rootOf, db)),
+  const months = [0, -1, -2, -3].map((d) => shiftMonth(month.year, month.month, d));
+  const [maps, [first]] = await Promise.all([
+    Promise.all(months.map((m) => rootSpending(userId, m, rootOf, db))),
+    db
+      .select({ day: sql<string | null>`min(${transactions.occurredOn})` })
+      .from(transactions)
+      .where(eq(transactions.userId, userId)),
+  ]);
+  const [current, previous, ...older] = maps;
+  // Average of the three months before, over the months I already had movements.
+  const before = [previous!, ...older].filter(
+    (_, i) => first?.day && boundsOf(months[i + 1]!).to >= first.day,
   );
-  // Average of the three months before: last month and the two before it.
   const average = new Map<string | null, Cents>();
-  for (const map of [previous!, ...older.slice(0, 2)]) {
+  for (const map of before) {
     for (const [k, v] of map) average.set(k, (average.get(k) ?? 0) + v);
   }
-  for (const [k, v] of average) average.set(k, Math.round(v / 3));
+  for (const [k, v] of average) average.set(k, Math.round(v / before.length));
   return compareCategories(current!, previous!, average).map((r) => ({
     ...r,
     name: nameOf(r.categoryId),
@@ -254,7 +262,7 @@ export async function trackSubscription(
   const input = recurringRuleInputSchema.parse({
     kind: "expense",
     label: sub.name,
-    amount: `${Math.floor(sub.lastAmountCents / 100)},${String(sub.lastAmountCents % 100).padStart(2, "0")}`,
+    amount: centsToInput(sub.lastAmountCents),
     merchantName: sub.merchantId ? sub.name : "",
     accountId: sub.accountId,
     toAccountId: "",
@@ -307,14 +315,11 @@ export async function listAnomalies(
   );
 }
 
-/** Everyday spending: expenses not coming from a recurring rule (my share). */
+/** Everyday cash out: expenses not coming from a recurring rule, full amount paid. */
 async function variableSpending(userId: string, from: string, to: string, db: Db) {
   const [row] = await db
     .select({
-      cents:
-        sql<number>`coalesce(sum(-${transactions.amountCents} - ${othersShareSql}), 0)`.mapWith(
-          Number,
-        ),
+      cents: sql<number>`coalesce(sum(-${transactions.amountCents}), 0)`.mapWith(Number),
     })
     .from(transactions)
     .where(
@@ -342,6 +347,8 @@ export async function getForecast(
   const { from } = monthBounds(year, month);
   const start = shiftMonth(year, month, -3);
   const end = shiftMonth(year, month, -1);
+  // This month's planned occurrences must exist before they are counted (as the dashboard).
+  await generateOccurrences(userId, monthBounds(year, month).to);
   const [rav, spentNow, spentBefore, firstMovement] = await Promise.all([
     getResteAVivre(userId, today, db),
     variableSpending(userId, from, today, db),

@@ -15,7 +15,15 @@ const short = (month: string) => shortMonth.format(new Date(`${month}-15T12:00:0
  * baseline; the accent marks the viewed month, the others stay grey; a dashed line shows
  * the average). Hover or focus a month for its figures; the table is the accessible view.
  */
-export function MonthChart({ points, current }: { points: ChartPoint[]; current: string }) {
+/** Months before my first movement are left out (at least 6 months stay on the axis). */
+function trimLeading(points: ChartPoint[]): ChartPoint[] {
+  const first = points.findIndex((p) => p.spentCents > 0 || p.incomeCents > 0);
+  if (first < 0) return points.slice(-6);
+  return points.slice(Math.min(first, Math.max(points.length - 6, 0)));
+}
+
+export function MonthChart({ points: all, current }: { points: ChartPoint[]; current: string }) {
+  const points = trimLeading(all);
   const [active, setActive] = useState<string | null>(null);
   const max = Math.max(1, ...points.map((p) => p.spentCents));
   const filled = points.filter((p) => p.spentCents > 0);
@@ -73,15 +81,10 @@ export function MonthChart({ points, current }: { points: ChartPoint[]; current:
         </div>
       </div>
       <div className="flex gap-[2px] text-xs text-muted" aria-hidden>
-        {points.map((p, i) => (
-          <span
-            key={p.month}
-            className={cn(
-              "flex-1 truncate text-center capitalize",
-              i % 2 === 1 && i !== points.length - 1 && "max-sm:invisible",
-            )}
-          >
-            {short(p.month)}
+        {points.map((p) => (
+          <span key={p.month} className="flex-1 truncate text-center">
+            <span className="max-sm:hidden">{short(p.month)}</span>
+            <span className="uppercase sm:hidden">{short(p.month).slice(0, 1)}</span>
           </span>
         ))}
       </div>

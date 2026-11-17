@@ -136,13 +136,20 @@ export function detectSubscriptions(charges: readonly Charge[], today: string): 
     if (run.length < MIN_CHARGES) continue;
     const last = run[run.length - 1]!;
     if (daysFrom(last.date, today) > STOPPED_AFTER_DAYS) continue;
-    const usual = median(run.map((c) => c.amountCents));
-    if (run.some((c) => Math.abs(c.amountCents - usual) > usual * AMOUNT_TOLERANCE)) continue;
-
     let since = run.length - 1;
     while (since > 0 && run[since - 1]!.amountCents === last.amountCents) since--;
     const before = since > 0 ? run[since - 1]!.amountCents : last.amountCents;
-    const day = Math.max(...run.slice(-3).map((c) => Number(c.date.slice(8, 10))));
+    // Stable amounts before and after the last price change (a big rise is still reported).
+    const stable = (part: Charge[]) => {
+      const usual = median(part.map((c) => c.amountCents));
+      return part.every((c) => Math.abs(c.amountCents - usual) <= usual * AMOUNT_TOLERANCE);
+    };
+    if (!stable(run.slice(0, since)) || !stable(run.slice(since))) continue;
+    if (last.amountCents > before * 3 || before > last.amountCents * 3) continue;
+    // Billing day: the last charge's, or the month end when charges drift around it.
+    const lastDay = Number(last.date.slice(8, 10));
+    const day =
+      lastDay >= 28 ? Math.max(...run.slice(-3).map((c) => Number(c.date.slice(8, 10)))) : lastDay;
     out.push({
       key,
       merchantId: last.merchantId,

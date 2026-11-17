@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allocateProportionally,
+  centsToInput,
   formatCents,
   parseAmountToCents,
   splitEvenly,
@@ -118,5 +119,17 @@ describe("allocateProportionally", () => {
   it("rejects negative weights and empty lists", () => {
     expect(() => allocateProportionally(100, [])).toThrow();
     expect(() => allocateProportionally(100, [10, -5])).toThrow();
+  });
+});
+
+describe("centsToInput", () => {
+  it.each([
+    [1250, "12,50"],
+    [5, "0,05"],
+    [-305, "-3,05"],
+    [123456, "1234,56"],
+  ])("%i -> %s", (cents, text) => {
+    expect(centsToInput(cents)).toBe(text);
+    expect(parseAmountToCents(text)).toBe(cents);
   });
 });

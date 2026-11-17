@@ -9,8 +9,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [x]          |
 | 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [x]          |
 | 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [x]          |
-| 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [~] en cours |
-| 6      | Analyses                                                                     | `sprint/6-analyses`   | [ ]          |
+| 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [x]          |
+| 6      | Analyses                                                                     | `sprint/6-analyses`   | [~] en cours |
 | 7      | Foyers (optionnel, à confirmer)                                              | `sprint/7-foyers`     | [ ]          |
 | 8      | Finitions et mise en production                                              | `sprint/8-finitions`  | [ ]          |
 
@@ -96,7 +96,18 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] UI : écran Budgets et objectifs, bandeau et badge d'alertes, message de seuil, proposition de règle, catégorie par ligne de ticket, règles dans Réglages
 - [x] Tests : 650 unitaires, 133 intégration, 24 e2e ; captures (`docs/screens/sprint-5/`), `ui-reviewer` (lignes de ticket compactes sur mobile, badge d'alerte en warning), `/code-review` (10 corrections : fusion de magasins avec règles, alertes répétées à la modification, « Comme le ticket » respecté, un seul budget ouvert par catégorie et période (migration 0005), période modifiée, requêtes du tableau de bord, règles en une transaction, SQL de part partagé)
 - [x] PR #7, CI verte
-- [x] Vérifier : récapitulatif, STOP
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #7 par l'utilisateur)
+
+## Sprint 6 : Analyses
+
+- [x] Décisions validées : questions traduites par le modèle et calculées par le code, rapport en page, abonnements suivis en un clic ou ignorés (ADR-039 à 041)
+- [x] Domaine (TDD) : comparaison, abonnements et hausses, inhabituel, prévision, simulateur, rappels, rapport, périodes et noms des questions
+- [x] Schéma : migration 0006 (abonnements ignorés)
+- [x] Serveur : séries, comparaison, abonnements, prévision, rappels, rapport, questions ; isolation A/B testée
+- [x] UI : écran Analyses (graphique 12 mois, prévision, catégories, abonnements, inhabituel, rappels, simulateur, questions), rapport imprimable, rappels et rapport sur le tableau de bord
+- [x] Tests : 689 unitaires, 148 intégration, 26 e2e ; captures (`docs/screens/sprint-6/`), `ui-reviewer`, `/code-review` (10 corrections : forte hausse de prix, échéances générées avant la prévision, prévision sur montants payés, avoirs et lignes dans les questions par magasin, jour de prélèvement, moyenne sur l'historique réel, appel de modèle partagé, `centsToInput`, test A/B des abonnements ignorés)
+- [ ] PR, CI verte
+- [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 

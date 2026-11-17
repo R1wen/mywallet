@@ -136,6 +136,32 @@ describe("detectSubscriptions", () => {
     expect(detectSubscriptions([...groceries, ...twice, ...stopped], today)).toEqual([]);
   });
 
+  it("reports a large price rise instead of dropping the subscription", () => {
+    const [s] = detectSubscriptions(
+      [
+        tx("2026-08-05", 1349, "netflix"),
+        tx("2026-09-05", 1349, "netflix"),
+        tx("2026-10-05", 1799, "netflix"),
+        tx("2026-11-05", 1799, "netflix"),
+      ],
+      today,
+    );
+    expect(s?.increase).toEqual({ fromCents: 1349, toCents: 1799, sinceDate: "2026-10-05" });
+  });
+
+  it("keeps the billing day when a charge slides over a month boundary", () => {
+    const [s] = detectSubscriptions(
+      [
+        tx("2026-08-01", 999, "box"),
+        tx("2026-08-31", 999, "box"),
+        tx("2026-10-01", 999, "box"),
+        tx("2026-11-02", 999, "box"),
+      ],
+      today,
+    );
+    expect(s).toMatchObject({ dayOfMonth: 2, nextDate: "2026-12-02" });
+  });
+
   it("tolerates month-end drift (31st, 30th, 28th)", () => {
     const rent = [
       tx("2026-07-31", 5000, null, "PRLV LOYER 07"),

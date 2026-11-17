@@ -154,3 +154,10 @@ export function allocateProportionally(total: Cents, weights: readonly number[])
 
   return floors.map((v) => (v === 0 ? 0 : v * sign));
 }
+
+/** Cents as typed in an amount input ("12,50", "-3,05"), integer arithmetic only. */
+export function centsToInput(cents: Cents): string {
+  assertCents(cents);
+  const abs = Math.abs(cents);
+  return `${cents < 0 ? "-" : ""}${Math.floor(abs / 100)},${String(abs % 100).padStart(2, "0")}`;
+}

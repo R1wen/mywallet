@@ -12,11 +12,10 @@ import {
 import { spentInScope } from "@/lib/domain/budgets";
 import { formatMonthFr, monthBounds } from "@/lib/domain/dates";
 import type { Cents } from "@/lib/domain/money";
-import { serverEnv } from "@/lib/env";
 import { ASK_JSON_SCHEMA, askPrompt, parseModelQuery, type ModelQuery } from "@/lib/validation/ask";
 import { getImportSettings } from "./import-settings";
+import { callModel } from "./structurers";
 import { fail, ok, type Result } from "./result";
-import { othersShareSql } from "./shares-sql";
 import { spendingByCategory } from "./spending";
 
 /**
@@ -27,47 +26,6 @@ import { spendingByCategory } from "./spending";
 
 const TIMEOUT_MS = 30_000;
 const MAX_MERCHANTS = 300;
-
-async function askModel(name: "ollama" | "gemini", prompt: string): Promise<unknown> {
-  const env = serverEnv();
-  if (name === "ollama") {
-    if (!env.OLLAMA_URL) return null;
-    const res = await fetch(new URL("/api/chat", env.OLLAMA_URL), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      body: JSON.stringify({
-        model: env.OLLAMA_MODEL,
-        stream: false,
-        format: ASK_JSON_SCHEMA,
-        options: { temperature: 0 },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!res.ok) throw new Error(`ollama status ${res.status}`);
-    return ((await res.json()) as { message?: { content?: string } }).message?.content ?? null;
-  }
-  if (!env.GEMINI_API_KEY) return null;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(env.GEMINI_MODEL)}:generateContent`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        responseSchema: ASK_JSON_SCHEMA,
-      },
-    }),
-  });
-  if (!res.ok) throw new Error(`gemini status ${res.status}`);
-  const body = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
-  };
-  return body.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
-}
 
 export type Answer = {
   understood: string;
@@ -120,15 +78,16 @@ export async function answerQuestion(
   let query: ModelQuery | null = null;
   try {
     query = parseModelQuery(
-      await askModel(
-        model,
-        askPrompt({
+      await callModel(model, {
+        timeoutMs: TIMEOUT_MS,
+        schema: ASK_JSON_SCHEMA,
+        prompt: askPrompt({
           today,
           categories: cats.map((c) => c.name),
           merchants: shops.map((m) => m.name),
           question,
         }),
-      ),
+      }),
     );
   } catch (e) {
     console.warn(`[ask:${model}] échec`, e instanceof Error ? e.name : "unknown");
@@ -177,10 +136,19 @@ export async function runQuery(
   /** My real spending in [from, to], per category (receipt lines included). */
   const spendingMap = async (from: string, to: string) => {
     if (!merchant) return spendingByCategory(userId, { from, to }, db);
+    // Refunds from that merchant lower the spending, as without a merchant filter.
     const ids = await db
       .select({ id: transactions.id })
       .from(transactions)
-      .where(filtered(from, to, "expense"));
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          inArray(transactions.kind, ["expense", "refund"]),
+          gte(transactions.occurredOn, from),
+          lte(transactions.occurredOn, to),
+          eq(transactions.merchantId, merchant.id),
+        ),
+      );
     return spendingByCategory(userId, { transactionIds: ids.map((r) => r.id) }, db);
   };
 
@@ -221,15 +189,10 @@ export async function runQuery(
       .filter((r) => r.value > 0)
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  } else if (query.groupBy === "merchant") {
-    const value =
-      query.measure === "count"
-        ? sql<number>`count(*)`.mapWith(Number)
-        : query.measure === "income"
-          ? sql<number>`sum(${transactions.amountCents})`.mapWith(Number)
-          : sql<number>`sum(-${transactions.amountCents} - ${othersShareSql})`.mapWith(Number);
-    const grouped = await db
-      .select({ name: merchants.name, value, categoryId: transactions.categoryId })
+  } else if (query.groupBy === "merchant" && query.measure === "spent") {
+    // Same rules as the total (receipt-line categories, shares, refunds), merchant by merchant.
+    const txs = await db
+      .select({ id: transactions.id, merchantId: transactions.merchantId, name: merchants.name })
       .from(transactions)
       .innerJoin(
         merchants,
@@ -237,18 +200,52 @@ export async function runQuery(
       )
       .where(
         and(
-          filtered(period.from, period.to, query.measure === "income" ? "income" : "expense"),
-          category
-            ? inArray(
-                transactions.categoryId,
-                lists.categories.filter((c) => inScope(c.id)).map((c) => c.id),
-              )
-            : undefined,
+          eq(transactions.userId, userId),
+          inArray(transactions.kind, ["expense", "refund"]),
+          gte(transactions.occurredOn, period.from),
+          lte(transactions.occurredOn, period.to),
+          merchant ? eq(transactions.merchantId, merchant.id) : undefined,
         ),
+      );
+    const idsByName = new Map<string, string[]>();
+    for (const t of txs) idsByName.set(t.name, [...(idsByName.get(t.name) ?? []), t.id]);
+    rows = (
+      await Promise.all(
+        // Busiest merchants only: one computation each.
+        [...idsByName]
+          .sort((a, b) => b[1].length - a[1].length)
+          .slice(0, 30)
+          .map(async ([label, ids]) => ({
+            label,
+            value: spentInScope(
+              category?.id ?? null,
+              await spendingByCategory(userId, { transactionIds: ids }, db),
+              parentOf,
+            ),
+          })),
       )
+    )
+      .filter((r) => r.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  } else if (query.groupBy === "merchant") {
+    const value =
+      query.measure === "count"
+        ? sql<number>`count(*)`.mapWith(Number)
+        : sql<number>`sum(${transactions.amountCents})`.mapWith(Number);
+    const grouped = await db
+      .select({ name: merchants.name, value, categoryId: transactions.categoryId })
+      .from(transactions)
+      .innerJoin(
+        merchants,
+        and(eq(merchants.userId, transactions.userId), eq(merchants.id, transactions.merchantId)),
+      )
+      .where(filtered(period.from, period.to, query.measure === "income" ? "income" : "expense"))
       .groupBy(merchants.name, transactions.categoryId);
     const byName = new Map<string, number>();
-    for (const g of grouped) byName.set(g.name, (byName.get(g.name) ?? 0) + g.value);
+    for (const g of grouped) {
+      if (inScope(g.categoryId)) byName.set(g.name, (byName.get(g.name) ?? 0) + g.value);
+    }
     rows = [...byName]
       .map(([label, v]) => ({ label, value: v }))
       .filter((r) => r.value > 0)

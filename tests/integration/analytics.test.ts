@@ -309,6 +309,37 @@ describe("isolation A/B", () => {
     expect(r.ok && r.data.total).toBe(0);
   });
 
+  it("B ignoring a key never hides A's subscriptions", async () => {
+    await createTransaction(A, {
+      kind: "expense",
+      amountCents: 1500,
+      occurredOn: "2026-09-20",
+      label: "Box internet",
+      merchantName: "Box internet",
+      accountId: checking,
+      toAccountId: null,
+      categoryId: null,
+      notes: null,
+    });
+    for (const d of ["2026-10-20", "2026-11-16"]) {
+      await createTransaction(A, {
+        kind: "expense",
+        amountCents: 1500,
+        occurredOn: d,
+        label: "Box internet",
+        merchantName: "Box internet",
+        accountId: checking,
+        toAccountId: null,
+        categoryId: null,
+        notes: null,
+      });
+    }
+    const [box] = await listSubscriptions(A, TODAY);
+    expect(box?.name).toBe("Box internet");
+    await dismissSubscription(B, box!.key);
+    expect((await listSubscriptions(A, TODAY)).map((s) => s.key)).toContain(box!.key);
+  });
+
   it("B cannot track A's subscription", async () => {
     expect(await trackSubscription(B, "m:does-not-matter", TODAY)).toEqual({
       ok: false,

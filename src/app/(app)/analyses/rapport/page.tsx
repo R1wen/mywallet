@@ -28,7 +28,7 @@ async function Report({ searchParams }: Pick<PageProps<"/analyses/rapport">, "se
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3 print:hidden">
+      <div className="mx-auto mb-3 flex max-w-2xl items-center justify-between gap-3 print:hidden">
         <Link
           href={`/analyses?mois=${formatMonthKey(month)}`}
           className="inline-flex items-center gap-1 text-sm text-muted hover:text-text pointer-coarse:min-h-11"

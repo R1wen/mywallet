@@ -150,7 +150,7 @@ async function Analyses({ searchParams }: Pick<PageProps<"/analyses">, "searchPa
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Par catégorie</CardTitle>
@@ -216,8 +216,8 @@ async function Analyses({ searchParams }: Pick<PageProps<"/analyses">, "searchPa
                   <span className="flex min-w-0 basis-full flex-col sm:flex-1 sm:basis-auto">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base">{s.name}</span>
-                      {!s.tracked && <Badge tone="warning">Non suivi</Badge>}
-                      {s.increase && <Badge tone="muted">En hausse</Badge>}
+                      {!s.tracked && <Badge tone="muted">Non suivi</Badge>}
+                      {s.increase && <Badge tone="warning">En hausse</Badge>}
                     </span>
                     <span className="text-xs text-muted">
                       {s.increase ? (
