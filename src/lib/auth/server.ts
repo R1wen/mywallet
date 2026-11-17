@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/lib/db/client";
 import { authAccount, rateLimit, session, user, verification } from "@/lib/db/schema/auth";
 import { serverEnv } from "@/lib/env";
+import { cancelDeletion } from "@/lib/server/account";
 import { provisionUser } from "@/lib/server/provisioning";
 import { PASSWORD_MAX, PASSWORD_MIN, signInSchema, signUpSchema } from "./validation";
 
@@ -51,6 +52,8 @@ export const auth = betterAuth({
       create: {
         after: async (created) => {
           await provisionUser(created.userId).catch(() => undefined);
+          // Signing in again cancels a pending account deletion (ADR-043).
+          await cancelDeletion(created.userId).catch(() => undefined);
         },
       },
     },

@@ -25,6 +25,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Tout sauf l'API d'auth, la santé, la vitrine /design, les fichiers statiques.
   matcher: [
-    "/((?!api/auth|api/health|design|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)$).*)",
+    "/((?!api/auth|api/health|api/cron|manifest.webmanifest|sw.js|offline.html|icons/|design|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)$).*)",
   ],
 };
