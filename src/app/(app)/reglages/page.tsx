@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/shell/app-shell";
 import { AccountsManager } from "@/components/settings/accounts-manager";
 import { CategoriesManager } from "@/components/settings/categories-manager";
 import { ImportSettings } from "@/components/settings/import-settings";
+import { DataAndAccount } from "@/components/settings/data-account";
 import { RulesManager } from "@/components/settings/rules-manager";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/session";
@@ -61,6 +62,7 @@ async function Settings() {
             active: r.active,
           }))}
         />
+        <DataAndAccount />
       </div>
       <CategoriesManager
         categories={categories.map((c) => ({
