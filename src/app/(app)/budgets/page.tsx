@@ -58,14 +58,14 @@ function BudgetRow({ b, categories }: { b: BudgetView; categories: CategoryOptio
   const ahead = b.expectedCents !== null && b.spentCents > b.expectedCents;
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-base font-medium">{b.name}</span>
           {b.period === "yearly" && <Badge tone="muted">Annuel</Badge>}
           {b.status.level === "warning" && <Badge tone="warning">Seuil atteint</Badge>}
           {b.status.level === "over" && <Badge tone="danger">Dépassé</Badge>}
         </span>
-        <span className="text-base whitespace-nowrap">
+        <span className="order-last basis-full text-base whitespace-nowrap sm:order-none sm:basis-auto">
           <Amount cents={b.spentCents} /> <span className="text-muted">sur</span>{" "}
           <Amount cents={b.amountCents} className="text-muted" />
         </span>
@@ -127,7 +127,7 @@ function GoalCard({ g, accounts }: { g: GoalView; accounts: { id: string; name: 
   const p = g.progress;
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-base font-medium">{g.name}</span>
           {p.achieved && <Badge tone="accent">Atteint</Badge>}
@@ -210,7 +210,7 @@ async function Budgets({ searchParams }: Pick<PageProps<"/budgets">, "searchPara
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <Card className="min-w-0">
-        <CardHeader>
+        <CardHeader className="flex-wrap">
           <div className="flex items-center gap-1">
             <Link
               href={`/budgets?mois=${formatMonthKey(prev)}`}
@@ -256,7 +256,7 @@ async function Budgets({ searchParams }: Pick<PageProps<"/budgets">, "searchPara
       </Card>
 
       <Card className="min-w-0 self-start">
-        <CardHeader>
+        <CardHeader className="flex-wrap">
           <CardTitle>Objectifs d&apos;épargne</CardTitle>
           <GoalDialog accounts={accountOptions} />
         </CardHeader>

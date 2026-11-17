@@ -302,6 +302,7 @@ test.describe("budgets : enveloppes, alertes et règles", () => {
     await expect(page.getByText("Budget créé.")).toBeVisible();
     await expect(page.getByRole("meter", { name: "Budget Courses" })).toBeVisible();
 
+    await page.goto("/transactions");
     await openNewTransaction(page);
     await page.getByLabel("Montant").fill("9");
     await page.getByLabel("Magasin ou site").fill("Marché du samedi");

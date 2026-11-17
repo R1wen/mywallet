@@ -8,8 +8,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | 1      | Cœur : comptes, catégories, transactions, magasins et logos, tableau de bord | `sprint/1-coeur`      | [x]          |
 | 2      | Récurrent : règles, occurrences, calendrier, reste à vivre                   | `sprint/2-recurrent`  | [x]          |
 | 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [x]          |
-| 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [~] en cours |
-| 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [ ]          |
+| 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [x]          |
+| 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [~] en cours |
 | 6      | Analyses                                                                     | `sprint/6-analyses`   | [ ]          |
 | 7      | Foyers (optionnel, à confirmer)                                              | `sprint/7-foyers`     | [ ]          |
 | 8      | Finitions et mise en production                                              | `sprint/8-finitions`  | [ ]          |
@@ -85,14 +85,24 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Captures (`docs/screens/sprint-4/`), `ui-reviewer`
 - [x] `/code-review` (10 corrections : verrou puis relecture des paiements concurrents, total de remboursement invalide, double import, montant d'une dépense partagée, rattachement à un mouvement partagé, offre puis annulation de remboursement, personnes archivées, requêtes du tableau de bord et de l'import, prédicat de verrou dans le domaine)
 - [x] PR #6, CI verte
-- [x] Vérifier : récapitulatif, STOP
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #6 par l'utilisateur)
+
+## Sprint 5 : Budgets et objectifs
+
+- [x] Décisions validées : pas de report, alertes dans l'app à seuil réglable, règles proposées puis confirmées, catégorie par ligne de ticket (ADR-036 à 038)
+- [x] Domaine (TDD) : périodes, statut et seuils, rythme, sous-catégories, objectifs, normalisation et mots-clés, règles, dépense réelle par catégorie avec lignes
+- [x] Schéma : migration 0004 additive (seuil d'alerte, une règle par magasin ou mot-clé)
+- [x] Serveur : budgets, alertes, objectifs, règles appliquées à la saisie, à l'import CSV et aux tickets, propositions après correction ; isolation A/B testée
+- [x] UI : écran Budgets et objectifs, bandeau et badge d'alertes, message de seuil, proposition de règle, catégorie par ligne de ticket, règles dans Réglages
+- [ ] Tests, captures, `ui-reviewer`, `/code-review`
+- [ ] PR, CI verte
+- [ ] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
 - Docker derrière un proxy : configurer `advanced.ipAddress` de Better Auth (IP de confiance) avant tout auto-hébergement exposé.
 - Lien optionnel entre un avoir et l'achat d'origine (ADR-020).
 - Repli OCR PaddleOCR (31 Mo de modèles à auto-héberger) : selon le benchmark sur les vrais tickets.
-- Catégorie au niveau de l'article et apprentissage des corrections (import, Sprint 3) : avec les budgets (Sprint 5).
 - Logo.dev (clé gratuite + attribution) comme source de logos supplémentaire (ADR-022).
 - RGPD : export complet des données (y compris fichiers de tickets) et suppression du compte : Sprint 8.
 - Override pnpm d’esbuild ≥ 0.25 (avis modéré, dépendance de développement de drizzle-kit).
