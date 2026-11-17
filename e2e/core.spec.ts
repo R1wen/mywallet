@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
 // One account per project (sign-up is rate limited), shared by the tests below, in order.
@@ -10,7 +11,7 @@ let accountEmail = "";
 /** New account: provisioned with categories, the merchant catalogue and a checking account. */
 async function signUp(browser: Browser, project: string, use: object): Promise<Page> {
   const p = await (await browser.newContext(use)).newPage();
-  const email = `e2e-core-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@mywallet.test`;
+  const email = `e2e-core-${project}-${randomUUID()}@mywallet.test`;
   accountEmail = email;
   await p.goto("/inscription");
   await p.getByLabel("Prénom").fill("Alex");
