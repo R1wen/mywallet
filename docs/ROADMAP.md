@@ -95,8 +95,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Serveur : budgets, alertes, objectifs, règles appliquées à la saisie, à l'import CSV et aux tickets, propositions après correction ; isolation A/B testée
 - [x] UI : écran Budgets et objectifs, bandeau et badge d'alertes, message de seuil, proposition de règle, catégorie par ligne de ticket, règles dans Réglages
 - [x] Tests : 650 unitaires, 133 intégration, 24 e2e ; captures (`docs/screens/sprint-5/`), `ui-reviewer` (lignes de ticket compactes sur mobile, badge d'alerte en warning), `/code-review` (10 corrections : fusion de magasins avec règles, alertes répétées à la modification, « Comme le ticket » respecté, un seul budget ouvert par catégorie et période (migration 0005), période modifiée, requêtes du tableau de bord, règles en une transaction, SQL de part partagé)
-- [ ] PR, CI verte
-- [ ] Vérifier : récapitulatif, STOP
+- [x] PR #7, CI verte
+- [x] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
