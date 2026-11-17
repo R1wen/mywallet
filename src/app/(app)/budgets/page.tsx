@@ -63,7 +63,7 @@ function BudgetRow({ b, categories }: { b: BudgetView; categories: CategoryOptio
           <span className="truncate text-base font-medium">{b.name}</span>
           {b.period === "yearly" && <Badge tone="muted">Annuel</Badge>}
           {b.status.level === "warning" && <Badge tone="warning">Seuil atteint</Badge>}
-          {b.status.level === "over" && <Badge tone="danger">Dépassé</Badge>}
+          {b.status.level === "over" && <Badge tone="muted">Dépassé</Badge>}
         </span>
         <span className="order-last basis-full text-base whitespace-nowrap sm:order-none sm:basis-auto">
           <Amount cents={b.spentCents} /> <span className="text-muted">sur</span>{" "}
@@ -208,7 +208,7 @@ async function Budgets({ searchParams }: Pick<PageProps<"/budgets">, "searchPara
     "flex size-8 items-center justify-center rounded-sm text-muted hover:bg-surface-2 hover:text-text pointer-coarse:size-11";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <Card className="min-w-0">
         <CardHeader className="flex-wrap">
           <div className="flex items-center gap-1">

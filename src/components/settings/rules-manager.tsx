@@ -84,11 +84,16 @@ export function RulesManager({ rules }: { rules: RuleItem[] }) {
           Corrigez la catégorie d&apos;une dépense : on vous proposera de toujours la classer ainsi.
         </p>
       ) : (
-        <ul role="list" className="divide-y divide-border border-t border-border">
-          {rules.map((r) => (
-            <RuleRow key={r.id} rule={r} />
-          ))}
-        </ul>
+        <>
+          <p className="px-4 pb-3 text-sm text-muted">
+            Apprises de vos corrections, appliquées aux saisies, aux relevés et aux tickets.
+          </p>
+          <ul role="list" className="divide-y divide-border border-t border-border">
+            {rules.map((r) => (
+              <RuleRow key={r.id} rule={r} />
+            ))}
+          </ul>
+        </>
       )}
     </Card>
   );

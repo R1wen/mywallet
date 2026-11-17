@@ -367,18 +367,18 @@ export function ReviewForm({
                 return (
                   <li
                     key={field.id}
-                    className="grid grid-cols-[4rem_minmax(0,1fr)_2.75rem] items-center gap-2 px-2 py-2 sm:grid-cols-[minmax(0,1fr)_9rem_4rem_6.5rem_2.75rem] sm:py-1.5"
+                    className="grid grid-cols-[minmax(0,1fr)_6rem_2.75rem] items-center gap-2 px-2 py-2 sm:grid-cols-[minmax(0,1fr)_9rem_4rem_6.5rem_2.75rem] sm:py-1.5"
                   >
                     <Input
                       aria-label={`Libellé de la ligne ${index + 1}`}
                       aria-invalid={Boolean(err?.label)}
-                      className="col-span-3 sm:col-span-1"
+                      className="order-1 sm:order-none"
                       autoComplete="off"
                       {...form.register(`items.${index}.label`)}
                     />
                     <NativeSelect
                       aria-label={`Catégorie de la ligne ${index + 1}`}
-                      className="col-span-3 sm:col-span-1"
+                      className="order-4 sm:order-none"
                       {...form.register(`items.${index}.categoryId`)}
                     >
                       <option value="">Comme le ticket</option>
@@ -403,14 +403,14 @@ export function ReviewForm({
                       aria-label={`Quantité de la ligne ${index + 1}`}
                       aria-invalid={Boolean(err?.quantity)}
                       inputMode="decimal"
-                      className="text-right font-mono tabular-nums"
+                      className="order-5 text-right font-mono tabular-nums sm:order-none"
                       {...form.register(`items.${index}.quantity`)}
                     />
                     <Input
                       aria-label={`Montant de la ligne ${index + 1}`}
                       aria-invalid={Boolean(err?.amount)}
                       inputMode="decimal"
-                      className="text-right font-mono tabular-nums"
+                      className="order-2 text-right font-mono tabular-nums sm:order-none"
                       {...form.register(`items.${index}.amount`)}
                     />
                     <Button
@@ -418,6 +418,7 @@ export function ReviewForm({
                       size="icon-sm"
                       variant="ghost"
                       aria-label={`Supprimer la ligne ${index + 1}`}
+                      className="order-3 sm:order-none"
                       onClick={() => items.remove(index)}
                     >
                       <Trash2 />
