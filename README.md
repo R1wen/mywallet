@@ -1,8 +1,8 @@
 # myWallet
 
-Suivi de dépenses personnelles : comptes, transactions, magasins, tickets de caisse (OCR gratuit), flux récurrents, partage de coûts et créances, budgets et analyses. Interface sombre, sobre, en français. 100 % gratuit à héberger (Vercel Hobby + Neon Free).
+Suivi de dépenses personnelles : comptes, transactions, magasins, tickets de caisse (OCR gratuit), flux récurrents, partage de coûts et créances, budgets, analyses, exports et mode privé. Installable sur téléphone. Interface sombre, sobre, en français. 100 % gratuit à héberger (Vercel Hobby + Neon Free).
 
-État d'avancement : [docs/ROADMAP.md](docs/ROADMAP.md) · Décisions : [docs/DECISIONS.md](docs/DECISIONS.md) · Déploiement : [docs/DEPLOY.md](docs/DEPLOY.md)
+**Installation : [docs/INSTALL.md](docs/INSTALL.md)** · État d'avancement : [docs/ROADMAP.md](docs/ROADMAP.md) · Décisions : [docs/DECISIONS.md](docs/DECISIONS.md) · Déploiement : [docs/DEPLOY.md](docs/DEPLOY.md) · Audit : [docs/AUDIT.md](docs/AUDIT.md)
 
 ## Démarrage local
 

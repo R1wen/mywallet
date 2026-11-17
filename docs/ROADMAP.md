@@ -10,9 +10,9 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 | 3      | Import intelligent : OCR gratuit, revue, CSV bancaire, rapprochement         | `sprint/3-import`     | [x]          |
 | 4      | Partage de coûts et créances                                                 | `sprint/4-partage`    | [x]          |
 | 5      | Budgets et objectifs                                                         | `sprint/5-budgets`    | [x]          |
-| 6      | Analyses                                                                     | `sprint/6-analyses`   | [~] en cours |
-| 7      | Foyers (optionnel, à confirmer)                                              | `sprint/7-foyers`     | [ ]          |
-| 8      | Finitions et mise en production                                              | `sprint/8-finitions`  | [ ]          |
+| 6      | Analyses                                                                     | `sprint/6-analyses`   | [x]          |
+| 7      | Foyers (optionnel, reporté par l'utilisateur)                                | `sprint/7-foyers`     | [ ] reporté  |
+| 8      | Finitions et mise en production                                              | `sprint/8-finitions`  | [~] en cours |
 
 ## Sprint 0 : Fondations
 
@@ -107,7 +107,26 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] UI : écran Analyses (graphique 12 mois, prévision, catégories, abonnements, inhabituel, rappels, simulateur, questions), rapport imprimable, rappels et rapport sur le tableau de bord
 - [x] Tests : 689 unitaires, 148 intégration, 26 e2e ; captures (`docs/screens/sprint-6/`), `ui-reviewer`, `/code-review` (10 corrections : forte hausse de prix, échéances générées avant la prévision, prévision sur montants payés, avoirs et lignes dans les questions par magasin, jour de prélèvement, moyenne sur l'historique réel, appel de modèle partagé, `centsToInput`, test A/B des abonnements ignorés)
 - [x] PR #8, CI verte
-- [x] Vérifier : récapitulatif, STOP
+- [x] Vérifier : récapitulatif, STOP (fusion de la PR #8 par l'utilisateur ; Sprint 7 reporté)
+
+## Sprint 8 : Finitions et mise en production
+
+- [x] Décisions validées : suppression du compte avec délai de 7 jours, mode privé par appareil, e-mail de reçus et benchmark réel reportés (ADR-042 à 045)
+- [x] Domaine (TDD) : CSV sûr, date de purge ; XLSX minimal et PDF testés
+- [x] Schéma : migration 0007 (demandes de suppression)
+- [x] Serveur : suppression différée et annulation à la reconnexion, purge quotidienne (Vercel Cron), export complet par table, transactions CSV/Excel, rapport PDF ; isolation testée
+- [x] UI : Données et compte dans Réglages, exports depuis Transactions et le rapport, mode privé (œil, touche H), palette ⌘K complète (recherche), application installable (manifeste, icônes, page hors ligne)
+- [x] Audit : axe sans violation grave sur 6 écrans (dans l'e2e), mesures de performance (`docs/AUDIT.md`), dépendances (`esbuild` forcé, `fflate` 0.8.3)
+- [x] Documentation d'installation (`docs/INSTALL.md`), déploiement (`CRON_SECRET`)
+- [ ] Tests, captures, `ui-reviewer`, `/code-review`
+- [ ] PR, CI verte
+- [ ] Vérifier : récapitulatif, STOP
+
+### Reporté
+
+- Sprint 7 Foyers (comptes partagés entre utilisateurs) : à la demande de l'utilisateur.
+- Réception de reçus par e-mail (Cloudflare Email Routing, domaine nécessaire), notifications push.
+- Benchmark OCR sur les vrais tickets : à lancer par l'utilisateur (`docs/INSTALL.md`).
 
 ### Reporté (décidé au Sprint 0)
 
@@ -115,6 +134,4 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - Lien optionnel entre un avoir et l'achat d'origine (ADR-020).
 - Repli OCR PaddleOCR (31 Mo de modèles à auto-héberger) : selon le benchmark sur les vrais tickets.
 - Logo.dev (clé gratuite + attribution) comme source de logos supplémentaire (ADR-022).
-- RGPD : export complet des données (y compris fichiers de tickets) et suppression du compte : Sprint 8.
-- Override pnpm d’esbuild ≥ 0.25 (avis modéré, dépendance de développement de drizzle-kit).
 - Évals des skills projet (skill-creator) : à lancer quand les skills auront servi sur un sprint.
