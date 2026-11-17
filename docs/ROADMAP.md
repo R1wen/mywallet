@@ -84,8 +84,8 @@ Légende : `[ ]` à faire · `[~]` en cours · `[x]` terminé (PR fusionnée, CI
 - [x] Tests : 605 unitaires, 115 intégration (partiel, offert, annulation, ticket entièrement partagé), 22 e2e (attribution à un ami puis remboursement)
 - [x] Captures (`docs/screens/sprint-4/`), `ui-reviewer`
 - [x] `/code-review` (10 corrections : verrou puis relecture des paiements concurrents, total de remboursement invalide, double import, montant d'une dépense partagée, rattachement à un mouvement partagé, offre puis annulation de remboursement, personnes archivées, requêtes du tableau de bord et de l'import, prédicat de verrou dans le domaine)
-- [ ] PR, CI verte
-- [ ] Vérifier : récapitulatif, STOP
+- [x] PR #6, CI verte
+- [x] Vérifier : récapitulatif, STOP
 
 ### Reporté (décidé au Sprint 0)
 
