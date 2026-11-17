@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { formatDateFr, isValidIsoDay } from "@/lib/domain/dates";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ const resolvers: Record<Mode, Resolver<AuthValues>> = {
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const params = useSearchParams();
+  const requested = params.get("suppression");
+  const deletionOn = requested && isValidIsoDay(requested) ? requested : null;
   const [formError, setFormError] = useState<string | null>(null);
   const isSignUp = mode === "sign-up";
 
@@ -60,6 +63,16 @@ export function AuthForm({ mode }: { mode: Mode }) {
             : "Accédez à vos comptes et à vos tickets."}
         </p>
       </div>
+
+      {!isSignUp && deletionOn && (
+        <p
+          role="status"
+          className="rounded-sm border border-warning/40 px-3 py-2 text-sm text-warning"
+        >
+          Votre compte sera supprimé le {formatDateFr(deletionOn)}. Vous reconnecter annule la
+          suppression.
+        </p>
+      )}
 
       {isSignUp && (
         <Field label="Prénom" error={errors.name?.message}>

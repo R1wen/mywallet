@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateFr } from "@/lib/domain/dates";
-import { formatCents } from "@/lib/domain/money";
 import type { TransactionListRow } from "@/lib/server/transactions";
 import { cn } from "@/lib/utils";
 import { useTransactionDialog } from "./transaction-dialog";
@@ -40,7 +39,7 @@ function RowLogo({ row }: { row: TransactionListRow }) {
 function KindBadge({ kind, sharedCents }: Pick<TransactionListRow, "kind" | "sharedCents">) {
   if (sharedCents > 0) {
     return (
-      <Badge tone="muted" title={`Dont ${formatCents(sharedCents)} dus par d'autres`}>
+      <Badge tone="muted" title="Une partie est due par d'autres personnes">
         Partagé
       </Badge>
     );

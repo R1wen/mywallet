@@ -35,9 +35,11 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.4",
+    "fflate": "0.8.3",
     "heic2any": "0.0.4",
     "lucide-react": "^1.73.0",
     "next": "16.4.6",
+    "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.5.438",
     "pg": "^8.23.1",
     "radix-ui": "^1.8.1",
@@ -52,6 +54,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
@@ -101,6 +104,9 @@
       "sharp",
       "unrs-resolver",
       "@tailwindcss/oxide"
-    ]
+    ],
+    "overrides": {
+      "@esbuild-kit/core-utils>esbuild": "^0.25.0"
+    }
   }
 }

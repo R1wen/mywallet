@@ -153,6 +153,7 @@ export function ReminderButton({
         <DialogBody>
           <Textarea
             readOnly
+            data-sensitive
             aria-label="Texte du message"
             value={text}
             rows={Math.min(14, text.split("\n").length + 1)}

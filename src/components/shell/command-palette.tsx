@@ -1,7 +1,21 @@
 "use client";
 
 import { Command } from "cmdk";
-import { CornerDownLeft, HandCoins, LogOut, PiggyBank, Plus, Search } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CornerDownLeft,
+  Download,
+  Eye,
+  FileText,
+  HandCoins,
+  LogOut,
+  PiggyBank,
+  Plus,
+  Search,
+  Store,
+  Tag,
+  Users,
+} from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +30,11 @@ import {
 import { useTransactionDialog } from "@/components/transactions/transaction-dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
+import { searchAction, type SearchResults } from "@/lib/actions/search";
+import { formatDateFr } from "@/lib/domain/dates";
+import { Amount } from "@/components/ui/amount";
 import { isAvailable, NAV_ITEMS } from "./nav";
+import { togglePrivateMode } from "./privacy-toggle";
 import { useSignOut } from "./sign-out";
 
 type PaletteContext = { open: () => void };
@@ -39,6 +57,23 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const signOut = useSignOut();
   const transactions = useTransactionDialog();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResults | null>(null);
+
+  // Search my data as the user types (after a short pause); cmdk keeps filtering the rest.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) return;
+    let stale = false;
+    const timer = setTimeout(async () => {
+      const r = await searchAction(q).catch(() => null);
+      if (!stale) setResults(r);
+    }, 200);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -74,7 +109,12 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 <Search className="size-4 text-muted" aria-hidden />
                 <Command.Input
                   autoFocus
-                  placeholder="Rechercher une page ou une action…"
+                  value={query}
+                  onValueChange={(v) => {
+                    setQuery(v);
+                    setResults(null);
+                  }}
+                  placeholder="Rechercher une page, une action, un magasin…"
                   className="h-full flex-1 bg-transparent text-md text-text outline-none placeholder:text-muted"
                 />
                 <Kbd>Échap</Kbd>
@@ -83,6 +123,88 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                 <Command.Empty className="px-2 py-6 text-center text-sm text-muted">
                   Aucun résultat.
                 </Command.Empty>
+                {results && query.trim().length >= 2 && (
+                  <>
+                    {results.transactions.length > 0 && (
+                      <Command.Group
+                        heading="Mouvements"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.transactions.map((t) => (
+                          <Command.Item
+                            key={t.id}
+                            value={`mouvement ${t.label} ${t.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => transactions.openEdit(t.id))}
+                          >
+                            <ArrowLeftRight className="size-4" aria-hidden />
+                            <span className="truncate">{t.label}</span>
+                            <span className="ml-auto flex items-center gap-3 text-xs">
+                              {formatDateFr(t.occurredOn)}
+                              <Amount cents={t.amountCents} variant="flow" className="text-sm" />
+                            </span>
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.merchants.length > 0 && (
+                      <Command.Group
+                        heading="Magasins"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.merchants.map((m) => (
+                          <Command.Item
+                            key={m.id}
+                            value={`magasin ${m.name} ${m.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => router.push(`/magasins/${m.id}`))}
+                          >
+                            <Store className="size-4" aria-hidden />
+                            {m.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.people.length > 0 && (
+                      <Command.Group
+                        heading="Personnes"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.people.map((p) => (
+                          <Command.Item
+                            key={p.id}
+                            value={`personne ${p.name} ${p.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() => run(() => router.push(`/personnes/${p.id}`))}
+                          >
+                            <Users className="size-4" aria-hidden />
+                            {p.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                    {results.categories.length > 0 && (
+                      <Command.Group
+                        heading="Catégories"
+                        className="mt-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
+                      >
+                        {results.categories.map((c) => (
+                          <Command.Item
+                            key={c.id}
+                            value={`categorie ${c.name} ${c.id} ${query}`}
+                            className={itemClass}
+                            onSelect={() =>
+                              run(() => router.push(`/transactions?categorie=${c.id}`))
+                            }
+                          >
+                            <Tag className="size-4" aria-hidden />
+                            Mouvements · {c.name}
+                          </Command.Item>
+                        ))}
+                      </Command.Group>
+                    )}
+                  </>
+                )}
                 <Command.Group
                   heading="Actions"
                   className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:text-subtle"
@@ -127,6 +249,46 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
                   >
                     <PiggyBank className="size-4" aria-hidden />
                     Budgets et objectifs
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="rapport du mois analyses tendances abonnements"
+                    onSelect={() => run(() => router.push("/analyses/rapport"))}
+                  >
+                    <FileText className="size-4" aria-hidden />
+                    Rapport du mois
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="masquer afficher les montants mode privé"
+                    onSelect={() => run(togglePrivateMode)}
+                  >
+                    <Eye className="size-4" aria-hidden />
+                    Masquer ou afficher les montants
+                    <Kbd className="ml-auto">H</Kbd>
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="exporter transactions csv excel tableur"
+                    onSelect={() =>
+                      run(() => {
+                        // A download, not a page: a plain link click keeps the current page.
+                        const a = document.createElement("a");
+                        a.href = "/api/export/transactions?format=xlsx";
+                        a.click();
+                      })
+                    }
+                  >
+                    <Download className="size-4" aria-hidden />
+                    Exporter les transactions (Excel)
+                  </Command.Item>
+                  <Command.Item
+                    className={itemClass}
+                    value="exporter toutes mes données rgpd supprimer compte"
+                    onSelect={() => run(() => router.push("/reglages"))}
+                  >
+                    <Download className="size-4" aria-hidden />
+                    Exporter mes données ou supprimer le compte
                   </Command.Item>
                   <Command.Item
                     className={itemClass}

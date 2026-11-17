@@ -13,6 +13,8 @@ const serverSchema = z
     OLLAMA_MODEL: z.string().min(1).default("qwen2.5vl:7b"),
     GEMINI_API_KEY: z.string().min(20).optional(),
     GEMINI_MODEL: z.string().min(1).default("gemini-flash-latest"),
+    // Daily purge of deleted accounts (ADR-043): Vercel Cron sends it as a bearer token.
+    CRON_SECRET: z.string().min(16).optional(),
   })
   .superRefine((env, ctx) => {
     // En production Vercel, l'URL publique doit être fournie explicitement et en HTTPS :

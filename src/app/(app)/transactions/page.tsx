@@ -55,6 +55,17 @@ function hrefWith(
   return s ? `/transactions?${s}` : "/transactions";
 }
 
+/** Current filters (not the page) for the export of all matching movements. */
+function exportQuery(params: Record<string, string | string[] | undefined>, format: string) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "page" || v === undefined) continue;
+    q.set(k, Array.isArray(v) ? (v[0] ?? "") : v);
+  }
+  q.set("format", format);
+  return q.toString();
+}
+
 async function TransactionsList({
   searchParams,
 }: Pick<PageProps<"/transactions">, "searchParams">) {
@@ -75,8 +86,25 @@ async function TransactionsList({
         categories={categories.map((c) => ({ id: c.id, name: c.name, parentId: c.parentId }))}
       />
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2 text-sm text-muted">
-        <span aria-live="polite">
-          {result.total} mouvement{result.total > 1 ? "s" : ""}
+        <span className="flex items-center gap-3">
+          <span aria-live="polite">
+            {result.total} mouvement{result.total > 1 ? "s" : ""}
+          </span>
+          {result.total > 0 && (
+            <span className="flex items-center gap-1">
+              <span className="max-sm:hidden">Exporter</span>
+              {(["csv", "xlsx"] as const).map((format) => (
+                <a
+                  key={format}
+                  href={`/api/export/transactions?${exportQuery(params, format)}`}
+                  aria-label={`Exporter en ${format === "csv" ? "CSV" : "Excel"}`}
+                  className="inline-flex h-7 items-center rounded-sm border border-border px-2 text-text hover:bg-surface-2 pointer-coarse:h-11 pointer-coarse:px-3"
+                >
+                  {format === "csv" ? "CSV" : "Excel"}
+                </a>
+              ))}
+            </span>
+          )}
         </span>
         <SortLinks params={params} filters={filters} />
       </div>

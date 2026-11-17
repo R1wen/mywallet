@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Kbd } from "@/components/ui/kbd";
 import { LogoMark } from "@/components/ui/logo";
 import { useCommandPalette } from "./command-palette";
+import { PrivacyToggle } from "./privacy-toggle";
 
 export function Topbar({ title, actions }: { title?: string; actions?: ReactNode }) {
   const palette = useCommandPalette();
@@ -29,7 +30,10 @@ export function Topbar({ title, actions }: { title?: string; actions?: ReactNode
           <Kbd>K</Kbd>
         </span>
       </button>
-      <div className="flex items-center gap-2 md:ml-auto">{actions}</div>
+      <div className="flex items-center gap-2 md:ml-auto">
+        <PrivacyToggle />
+        {actions}
+      </div>
     </header>
   );
 }
