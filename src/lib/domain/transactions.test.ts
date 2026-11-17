@@ -59,7 +59,23 @@ describe("summarizeFlows", () => {
       incomeCents: 250000,
       spentCents: 9750, // 8000 + 4250 - 2500 (refund lowers my spending, never income)
       reimbursedCents: 3000,
+      sharedCents: 0,
       netCents: 250000 - 9750 + 3000,
+    });
+  });
+
+  it("counts only my share of a shared expense; the cash flow keeps the full amount", () => {
+    // 80 € receipt, 30 € owed by a friend who paid back 30 €.
+    const s = summarizeFlows([
+      { kind: "expense", amountCents: -8000, categoryId: null, othersShareCents: 3000 },
+      tx("reimbursement", 3000),
+    ]);
+    expect(s).toEqual({
+      incomeCents: 0,
+      spentCents: 5000,
+      reimbursedCents: 3000,
+      sharedCents: 3000,
+      netCents: -5000,
     });
   });
 
@@ -72,12 +88,22 @@ describe("summarizeFlows", () => {
       incomeCents: 0,
       spentCents: 0,
       reimbursedCents: 0,
+      sharedCents: 0,
       netCents: 0,
     });
   });
 });
 
 describe("spendByCategory", () => {
+  it("uses my real expense: others' shares are not my spending", () => {
+    expect(
+      spendByCategory([
+        { kind: "expense", amountCents: -8000, categoryId: "food", othersShareCents: 3000 },
+        { kind: "expense", amountCents: -2000, categoryId: "fun", othersShareCents: 2000 },
+      ]),
+    ).toEqual([{ categoryId: "food", spentCents: 5000 }]);
+  });
+
   const rows = [
     tx("expense", -8000, "courses"),
     tx("expense", -2000, "courses"),
