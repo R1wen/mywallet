@@ -174,3 +174,21 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Mode privé (ADR-044) : les montants sont masqués partout, sans changer la mise en page. */
+html[data-private] [data-amount] {
+  position: relative;
+  color: transparent !important;
+}
+html[data-private] [data-amount]::after {
+  content: "••••";
+  position: absolute;
+  inset: 0;
+  color: var(--text-muted);
+  text-align: inherit;
+  letter-spacing: 0.08em;
+}
+html[data-private] [data-sensitive] {
+  filter: blur(6px);
+  user-select: none;
+}

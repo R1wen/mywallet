@@ -53,7 +53,7 @@ async function Report({ searchParams }: Pick<PageProps<"/analyses/rapport">, "se
         <p className="mb-6 text-base text-muted">
           Calculé à partir de vos mouvements, sur ma dépense réelle.
         </p>
-        <Card className="divide-y divide-border">
+        <Card className="divide-y divide-border" data-sensitive>
           {report.sections.map((s) => (
             <section key={s.title} className="px-5 py-4">
               <h2 className="mb-2 text-sm font-medium text-muted">{s.title}</h2>

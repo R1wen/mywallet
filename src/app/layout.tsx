@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -30,10 +31,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="fr" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
+    // The private-mode script may set data-private on <html> before hydration.
+    <html
+      lang="fr"
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full">
         {children}
         <Toaster />
+        <Script src="/private-mode.js" strategy="beforeInteractive" />
       </body>
     </html>
   );
