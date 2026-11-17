@@ -167,3 +167,24 @@ Format court : contexte, décision, conséquences. Une décision remplacée est 
 - Contexte : une CSP à nonce oblige à rendre chaque page à la requête ; la doc Next 16 la déclare incompatible avec le prérendu partiel (Cache Components, ADR-007).
 - Décision : CSP fixe dans `next.config.ts` : tout limité à l'origine (`default-src`, `connect-src`, `img-src`, `worker-src` avec `blob:`), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`. `script-src` garde `'unsafe-inline'` (charge RSC en scripts en ligne) et ajoute `'wasm-unsafe-eval'` pour l'OCR WebAssembly, sans `eval()` JavaScript en production.
 - Conséquences : l'exfiltration vers un domaine tiers est bloquée (`connect-src`), mais un script injecté en ligne ne le serait pas : l'échappement React et l'absence de `dangerouslySetInnerHTML` restent la première défense. Les modèles OCR sont servis depuis l'origine (aucun CDN tiers).
+
+## ADR-032 — Partage d'une dépense et « ma dépense réelle »
+
+- Décision (validée, règles financières du Sprint 0) : la dépense garde le montant total (le solde reflète le mouvement réel) ; chaque part due crée une créance (`claims`), par ligne de ticket ou sur la dépense entière (parts égales).
+- Une ligne partagée par plusieurs personnes est divisée en parts égales ; quand j'y participe, les autres paient la part arrondie à l'inférieur et je garde le centime restant (validé au Sprint 4). Entre amis seuls : plus fort reste. Les lignes négatives (remises) sont réparties au prorata des lignes positives (`netLineAmounts`) ; la TVA est répartie au prorata des parts, à titre indicatif.
+- « Ma dépense réelle » (tableau de bord, catégories, statistiques des magasins) = total − parts des autres : créance en attente ou remboursée = son montant, offerte = ce qui a été payé avant l'offre, annulée = 0 (`othersShareSql`, `summarizeFlows`). Le solde et le solde du mois restent des flux réels.
+- Le partage est créé dans la même transaction que la validation du ticket (« Tout est à moi ? ») ou modifié plus tard depuis la dépense. Une part remboursée (même partiellement) ou offerte ne peut plus changer ; une part annulée est rouverte si on la partage à nouveau.
+- Aucune migration : le schéma du Sprint 0 (`people`, `claims`, `claim_payments`) suffit.
+
+## ADR-033 — Remboursements
+
+- Décision (validée) : un remboursement crée un mouvement `reimbursement` (crédit sur n'importe quel compte, pas un revenu) et une ligne `claim_payments` par créance réglée ; la somme est plafonnée au reste dû. Un versement couvrant plusieurs créances est imputé de la plus ancienne à la plus récente, répartition modifiable avant validation.
+- Annuler un remboursement supprime son mouvement : les créances qu'il soldait repassent en attente (une offre reste une offre). Une dépense dont une créance a reçu de l'argent ne peut pas être supprimée, ni son montant descendre sous les parts dues, ni changer de type.
+
+## ADR-034 — Offrir, annuler, rouvrir
+
+- Décision (validée) : « Offrir » = la dette est oubliée, le reste dû devient ma dépense. « Annuler » = part attribuée par erreur : statut `cancelled` gardé dans l'historique, refusé si un remboursement existe. Les deux se rouvrent (retour en attente). Une personne avec un historique ne se supprime pas, elle s'archive (masquée des choix de partage).
+
+## ADR-035 — Virement reçu dans un relevé CSV
+
+- Décision (validée) : à l'aperçu, une ligne entrante nouvelle dont le montant est exactement le reste dû d'une créance (la plus ancienne) ou le total dû d'une seule personne, pour des dépenses antérieures au virement, est proposée en « remboursement » de cette personne. L'utilisateur peut choisir une autre personne ou « Créer » (revenu). Rien n'est lié sans validation de l'import ; une ligne refusée (montant supérieur au dû) annule tout l'import.
