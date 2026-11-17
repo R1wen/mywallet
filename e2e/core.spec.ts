@@ -296,19 +296,19 @@ test.describe("budgets : enveloppes, alertes et règles", () => {
     await page.goto("/budgets");
     await page.getByRole("button", { name: "Nouveau budget" }).first().click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Catégorie").selectOption({ label: "Courses" });
+    await dialog.getByLabel("Catégorie").selectOption({ label: "Restaurants" });
     await dialog.getByLabel("Montant").fill("10");
     await dialog.getByRole("button", { name: "Créer" }).click();
     await expect(page.getByText("Budget créé.")).toBeVisible();
-    await expect(page.getByRole("meter", { name: "Budget Courses" })).toBeVisible();
+    await expect(page.getByRole("meter", { name: "Budget Restaurants" })).toBeVisible();
 
     await page.goto("/transactions");
     await openNewTransaction(page);
     await page.getByLabel("Montant").fill("9");
-    await page.getByLabel("Magasin ou site").fill("Marché du samedi");
-    await page.getByRole("dialog").getByLabel("Catégorie").selectOption({ label: "Courses" });
+    await page.getByLabel("Magasin ou site").fill("Crêperie du port");
+    await page.getByRole("dialog").getByLabel("Catégorie").selectOption({ label: "Restaurants" });
     await page.getByLabel("Montant").press("Enter");
-    await expect(page.getByText(/Budget Courses : \d+ %/)).toBeVisible();
+    await expect(page.getByText(/Budget Restaurants : \d+ %/)).toBeVisible();
     // A category chosen by hand for a new merchant: the app offers to remember it.
     await page.getByRole("button", { name: "Toujours" }).click();
     await expect(page.getByText("Règle enregistrée.")).toBeVisible();
@@ -316,6 +316,6 @@ test.describe("budgets : enveloppes, alertes et règles", () => {
     await page.goto("/budgets");
     await expect(page.getByText(/Seuil atteint|Dépassé/).first()).toBeVisible();
     await page.goto("/reglages");
-    await expect(page.getByText("Magasin Marché du samedi")).toBeVisible();
+    await expect(page.getByText("Magasin Crêperie du port")).toBeVisible();
   });
 });
